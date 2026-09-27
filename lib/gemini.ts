@@ -35,6 +35,7 @@ type DebriefInput = {
   transcript: string;
   abstract: string;
   citations: { text: string; status: string; hitTitle?: string }[];
+  language: "en" | "am";
 };
 
 export type DebriefBody = {
@@ -48,26 +49,46 @@ export function formatDebrief(body: DebriefBody) {
 }
 
 export function fallbackDebrief(input: DebriefInput): DebriefBody {
+  const am = input.language === "am";
   const ok = input.citations.filter((c) => c.status === "in_corpus");
   const bad = input.citations.filter(
     (c) => c.status === "not_found" || c.status === "unverified",
   );
-  const keep = ok[0]
-    ? `You named a source Scholarxiv can see: ${ok[0].hitTitle || ok[0].text}.`
-    : "You kept a clear through-line in the talk.";
-  const fixes: [string, string] = [
-    bad[0]
-      ? `Do not lean on “${bad[0].text}” — Scholarxiv did not confirm that source.`
-      : "State the research question in one sentence.",
-    bad[1]
-      ? `Drop or verify “${bad[1].text}” before the panel.`
-      : input.abstract
-        ? "Tie each claim back to the abstract you packed."
-        : "Name year and venue only when the paper is real.",
-  ];
-  const say = ok[0]?.hitTitle
-    ? `This work follows ${ok[0].hitTitle}.`
-    : "This work asks one question and answers it from sources we can show.";
+  const keep = am
+    ? ok[0]
+      ? `በScholarxiv የተገኘ ምንጭ ጠቅሰሃል፦ ${ok[0].hitTitle || ok[0].text}.`
+      : "ንግግርህ ግልጽ የሆነ መስመር አለው።"
+    : ok[0]
+      ? `You named a source Scholarxiv can see: ${ok[0].hitTitle || ok[0].text}.`
+      : "You kept a clear through-line in the talk.";
+  const fixes: [string, string] = am
+    ? [
+        bad[0]
+          ? `“${bad[0].text}” ላይ አትመስረት — Scholarxiv ይህን ምንጭ አላረጋገጠም።`
+          : "የምርምር ጥያቄህን በአንድ አረፍተ ነገር ግለጽ።",
+        bad[1]
+          ? `“${bad[1].text}” ከፓነሉ በፊት አረጋግጥ ወይም ተው።`
+          : input.abstract
+            ? "እያንዳንዱን ክስ ከዝግጅት አብስትራክትህ ጋር አያይዝ።"
+            : "ዓመት እና ጆርናል እውነተኛ ሲሆን ብቻ ጥቀስ።",
+      ]
+    : [
+        bad[0]
+          ? `Do not lean on “${bad[0].text}” — Scholarxiv did not confirm that source.`
+          : "State the research question in one sentence.",
+        bad[1]
+          ? `Drop or verify “${bad[1].text}” before the panel.`
+          : input.abstract
+            ? "Tie each claim back to the abstract you packed."
+            : "Name year and venue only when the paper is real.",
+      ];
+  const say = am
+    ? ok[0]?.hitTitle
+      ? `ይህ ሥራ ${ok[0].hitTitle} ላይ ይመሠረታል።`
+      : "ይህ ሥራ አንድ ጥያቄ ይጠይቃል እና ማሳየት ከምንችለው ምንጭ ይመልሳል።"
+    : ok[0]?.hitTitle
+      ? `This work follows ${ok[0].hitTitle}.`
+      : "This work asks one question and answers it from sources we can show.";
   return { keep, fixes, say };
 }
 
@@ -118,6 +139,7 @@ in_corpus means Scholarxiv found a matching title. not_found means Scholarxiv di
 
 Tone: calm, specific, useful. No shame. Do not say unacceptable, only, entire talk, or you have failed.
 Quote names as heard in the talk. Do not "correct" Vans to Vance or invent a real title.
+Respond in ${input.language === "am" ? "Amharic (Ge'ez script)" : "English"}.
 
 keep: one short sentence about what they did well (usually an in_corpus source).
 fixes: two short sentences. For not_found or unverified, say not to cite that heard phrase until Scholarxiv can see it.

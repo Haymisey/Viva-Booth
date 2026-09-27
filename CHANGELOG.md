@@ -2,6 +2,13 @@
 
 Team log of what shipped, broke, or got cut. Mirror important entries to STARK Changelogs.
 
+## 2026-09-27
+
+- FEAT-008 claimed on `feat/p8-language-spoken-errors` by eyob2one.
+- Added language mode for speech flow: English (`en-US`) and tested local language Amharic (`am-ET`).
+- Mic failures (permission denied, no device, unsupported browser, network/start errors) now show visual alerts and are spoken aloud.
+- Citation extract/verify and debrief API failures now keep visual error messaging and also speak clear failure guidance in the active language.
+
 ## 2026-09-24
 
 - Gemini lists citation attempts from the heard transcript (verbatim only). Scholarxiv still decides in corpus / not found. Matcher needs most of the claim words, not two generic ones.
