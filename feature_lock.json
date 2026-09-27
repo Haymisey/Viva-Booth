@@ -1,7 +1,7 @@
 {
   "project_name": "Viva booth (working title)",
   "purpose": "Who owns which slice. Claim in a PR. One owner per feature.",
-  "last_updated": "2026-09-24",
+  "last_updated": "2026-09-27",
   "status_values": ["unclaimed", "claimed", "released"],
   "features": [
     {
@@ -112,11 +112,11 @@
       "id": "FEAT-009",
       "name": "Scholarxiv ideation + changelogs",
       "phase": "P9",
-      "status": "unclaimed",
-      "owner": null,
-      "branch": null,
-      "claimed_at": null,
-      "released_at": null,
+      "status": "released",
+      "owner": "Abrham",
+      "branch": "feat/p9-ideation",
+      "claimed_at": "2026-09-27T09:18:00Z",
+      "released_at": "2026-09-27T09:20:00Z",
       "depends_on": [],
       "deliverables": ["CHANGELOG.md", "README.md"],
       "verification": "Ideation trail on Scholarxiv; CHANGELOG and STARK notes stay current"
