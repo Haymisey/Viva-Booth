@@ -101,7 +101,7 @@
       "phase": "P8",
       "status": "claimed",
       "owner": "eyob2one",
-      "branch": "feat/p8-language-spoken-errors",
+      "branch": "copilot/feat-008-language-spoken-errors",
       "claimed_at": "2026-09-27T06:47:06Z",
       "released_at": null,
       "depends_on": ["FEAT-002"],
