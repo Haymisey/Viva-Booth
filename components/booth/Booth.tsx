@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DebriefPanel } from "@/components/booth/DebriefPanel";
 import { ExaminerPackCard } from "@/components/booth/ExaminerPackCard";
 import { ManuscriptForm } from "@/components/booth/ManuscriptForm";
@@ -107,7 +107,7 @@ export function Booth() {
   const [errorText, setErrorText] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
-  const speak = (text: string) => {
+  const speak = useCallback((text: string) => {
     if (typeof window === "undefined") return;
     if (typeof SpeechSynthesisUtterance === "undefined" || !("speechSynthesis" in window)) {
       return;
@@ -120,22 +120,22 @@ export function Booth() {
     } catch {
       /* keep visual error only */
     }
-  };
+  }, [language]);
 
-  const reportError = (text: string) => {
+  const reportError = useCallback((text: string) => {
     setErrorText(text);
     speak(text);
-  };
+  }, [speak]);
 
-  const reportMicError = (reason: MicFailureReason) => {
+  const reportMicError = useCallback((reason: MicFailureReason) => {
     reportError(micErrorText[language][reason]);
-  };
+  }, [language, reportError]);
 
-  const reportApiError = (kind: "extract" | "verify" | "debrief") => {
+  const reportApiError = useCallback((kind: "extract" | "verify" | "debrief") => {
     reportError(apiErrorText[language][kind]);
-  };
+  }, [language, reportError]);
 
-  const resetSession = () => {
+  const resetSession = useCallback(() => {
     setLive("");
     setTranscript("");
     setSpoken([]);
@@ -143,9 +143,9 @@ export function Booth() {
     setDebrief("");
     setElapsed(0);
     setErrorText("");
-  };
+  }, []);
 
-  const runVerify = async (list: Citation[], spokenText: string, abstract: string) => {
+  const runVerify = useCallback(async (list: Citation[], spokenText: string, abstract: string) => {
     setChecked(list);
     setDebrief("");
 
@@ -161,9 +161,9 @@ export function Booth() {
     });
     setDebrief(debriefResult.text);
     if (debriefResult.failed) reportApiError("debrief");
-  };
+  }, [language, reportApiError]);
 
-  const finalizeStop = () => {
+  const finalizeStop = useCallback(() => {
     const spokenText = live.trim();
     const fromTalk = extractSpeechCitations(spokenText);
     setTranscript(spokenText);
@@ -185,7 +185,7 @@ export function Booth() {
 
       await runVerify(mergeCitations(fromPack, speech), spokenText, abstract);
     })();
-  };
+  }, [live, pack, reportApiError, runVerify]);
 
   useEffect(() => {
     const stored = loadPack();
@@ -228,7 +228,7 @@ export function Booth() {
       window.clearTimeout(wait);
       stopListen?.();
     };
-  }, [phase, language]);
+  }, [phase, language, reportMicError]);
 
   useEffect(() => {
     return bindVivaSession({
@@ -257,7 +257,7 @@ export function Booth() {
         canStop: phase === "talking",
       }),
     });
-  }, [phase, elapsed, live, language]);
+  }, [phase, elapsed, live, language, finalizeStop, resetSession]);
 
   const lockPack = (mode: SessionMode) => {
     const next = buildPack(manuscript, mode);
