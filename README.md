@@ -4,11 +4,28 @@ STARK hackathon: students **practise a thesis defence or class talk out loud**.
 
 **Read first, then listen.** They paste the paper (title, research question, abstract, up to five references). We look those citations up on **Scholarxiv** before the mic. They talk (**Voxide**). We check the talk against **their text** and against **abstracts we actually fetched**. We coach **how to say it**. Viva questions come from **hits we pulled**, not invented papers. Host on **EthioDeploy**. No payments.
 
-We do not decide scientific “truth.” We decide: said vs their manuscript, named source exists, claim vs that abstract. Missing API hit = **unverified**.
+We do not decide scientific "truth." We decide: said vs their manuscript, named source exists, claim vs that abstract. Missing API hit = **unverified**.
 
 **Open talk:** no paste. Citations come from speech only, then the same Scholarxiv check.
 
-Not a ChatGPT tab. Not a search-only paper chatbot. Not a TED “energy” scorer. Not a full-PDF factory.
+Not a ChatGPT tab. Not a search-only paper chatbot. Not a TED "energy" scorer. Not a full-PDF factory.
+
+## Ideation
+
+**Problem.** Ethiopian students rarely practise their viva out loud. They re-read notes; they do not speak. When they finally stand in front of an examiner they stumble on terminology they wrote themselves, cite papers they cannot locate, and cannot answer questions about claims in their own abstract. Existing tools either grade presentation style or are full literature-search engines. Neither closes the gap between writing a thesis and defending it verbally.
+
+**Rejected paths.**
+
+- *Full-PDF pipeline* — storage, latency, and privacy cost. A five-reference form covers everything an examiner pack needs. Cut.
+- *Confidence / energy scorer* — grading enthusiasm says nothing about factual accuracy. A student can say a wrong claim very confidently. Cut.
+- *Generic AI chatbot* — invents plausible-sounding papers. If an examiner question contains a fake citation, the student cannot look it up later. Cut.
+- *Search-only paper tool* — knowing a paper exists is not the same as practising how to talk about it for two minutes. The practice loop is the product. Cut.
+
+**Core constraint.** We only claim a paper exists if Scholarxiv confirms it. We only coach phrasing on what the student actually said. Examiner questions are grounded in abstracts we actually fetched. A missing API hit is `unverified`, never invented.
+
+**Why EthioDeploy.** Reachable inside Ethiopia without a VPN or a credit card. No payments, no accounts, MIT-licensed.
+
+Full ideation trail with dates: [`CHANGELOG.md § 2026-09-27`](CHANGELOG.md) — FEAT-009 (Abrham).
 
 ## Run locally
 
@@ -25,7 +42,7 @@ Board: [`feature_lock.json`](feature_lock.json). Statuses: `unclaimed` | `claime
 
 1. Open a PR that sets one feature to `claimed`, with your **name** (or GitHub), **branch**, and `claimed_at`. Prefer that PR to touch only the lock file.
 2. One owner per `id`. If two claims collide, the first merge wins.
-3. Commit mainly the paths in that feature’s `deliverables`.
+3. Commit mainly the paths in that feature's `deliverables`.
 4. When the `verification` line is true, the same (or next) PR sets `released` and `released_at`.
 5. There is no lock server. Git is the lock. Keep `main` demoable.
 
@@ -33,7 +50,7 @@ Work on `feat/p2-voxide`-style branches. Log releases in [`CHANGELOG.md`](CHANGE
 
 ## Contest artifacts
 
-1. **Thinking** — problem, rejected paths, and why this booth: document on Scholarxiv (FEAT-009).
+1. **Thinking** — problem, rejected paths, and why this booth: [`CHANGELOG.md § 2026-09-27`](CHANGELOG.md) (FEAT-009, Abrham).
 2. **Clock** — this repo + changelog + STARK changelogs.
 3. **Runs** — live EthioDeploy URL (FEAT-001).
 
