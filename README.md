@@ -36,6 +36,24 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_VOXIDE_PUBLIC_KEY` so the voice widget appears. Whitelist `localhost` and the EthioDeploy host in the Voxide dashboard. Set `SCHOLARXIV_API_KEY` for citation checks and `GEMINI_API_KEY` for the debrief (both server only). Restart `npm run dev` after changing `.env.local`.
 
+## Deploy on EthioDeploy
+
+Do **not** start with `npm run dev`. That is the local compiler. The live box must build once, then serve:
+
+- **Install:** `npm ci` (full install — Tailwind and TypeScript are needed to build)
+- **Build:** `npm run build`
+- **Start:** `npm run start`
+- **Port:** `3000`
+- **Health check:** path `/api/health`, start period at least 45 seconds
+
+Do **not** set `NODE_ENV` in the EthioDeploy dashboard. Next.js only accepts `production` / `development` / `test` and sets it itself. A value like `Production` or `prod` is what triggers the non-standard `NODE_ENV` warning.
+
+Do **not** turn on npm “production-only” install before the build (`npm warn config production Use --omit=dev instead`). That drops the packages `next build` needs.
+
+Copy the same keys from `.env.example` into the EthioDeploy env panel (`NEXT_PUBLIC_VOXIDE_PUBLIC_KEY`, `SCHOLARXIV_API_KEY`, `GEMINI_API_KEY`). Whitelist the public host in Voxide.
+
+If the dashboard still health-checks `/` in the first second, point it at `/api/health` or temporarily disable the check so the first container can stay up.
+
 ## Claim a feature
 
 Board: [`feature_lock.json`](feature_lock.json). Statuses: `unclaimed` | `claimed` | `released`.

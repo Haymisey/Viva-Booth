@@ -2,6 +2,10 @@
 
 Team log of what shipped, broke, or got cut. Mirror important entries to STARK Changelogs.
 
+## 2026-10-01
+
+- EthioDeploy: production start (`next start` on `0.0.0.0`), `/api/health`, Dockerfile + Nixpacks. Do not run `next dev` on the live box.
+
 ## 2026-09-27
 
 - FEAT-008 claimed on `copilot/feat-008-language-spoken-errors` by eyob2one.
@@ -33,6 +37,10 @@ Hosted on EthioDeploy so it is reachable inside Ethiopia without a VPN or a cred
 - `CHANGELOG.md` — this entry; previous entries 2026-09-22 through 2026-09-24 already captured per-feature releases.
 - `README.md` — Ideation section added below the run instructions.
 - `feature_lock.json` — FEAT-009 set to `released`.
+
+## 2026-10-01
+
+- EthioDeploy: production start (`next start` on `0.0.0.0:3000`), `/api/health`, Dockerfile + Nixpacks. Do not run `next dev` on the live box.
 
 ## 2026-09-24
 
