@@ -2,6 +2,8 @@ export type SessionPhase = "idle" | "prepared" | "talking" | "stopped";
 
 export type SessionMode = "open" | "prepared";
 
+export type AppLanguage = "en" | "am";
+
 export type CitationStatus = "pending" | "in_corpus" | "not_found" | "unverified";
 
 export type Manuscript = {

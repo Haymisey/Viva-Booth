@@ -4,6 +4,10 @@ Team log of what shipped, broke, or got cut. Mirror important entries to STARK C
 
 ## 2026-09-27
 
+- FEAT-008 claimed on `copilot/feat-008-language-spoken-errors` by eyob2one.
+- Added language mode for speech flow: English (`en-US`) and tested local language Amharic (`am-ET`).
+- Mic failures (permission denied, no device, unsupported browser, network/start errors) now show visual alerts and are spoken aloud.
+- Citation extract/verify and debrief API failures now keep visual error messaging and also speak clear failure guidance in the active language.
 ### FEAT-009 — Ideation trail (Abrham)
 
 **Problem.** Ethiopian students, especially postgraduate and undergraduate thesis candidates, rarely practise their defence out loud before the real viva. They re-read notes, but they do not speak. When they finally stand in front of an examiner they stumble on terminology they wrote themselves, cite papers they cannot actually locate, and cannot answer follow-up questions about claims in their own abstract. Existing tools either grade presentation style ("you said 'um' 42 times") or are full literature-search engines. Neither closes the gap between writing a thesis and defending it verbally.
