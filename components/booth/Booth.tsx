@@ -10,27 +10,24 @@ import {
   extractSpeechCitations,
   mergeCitations,
 } from "@/lib/extract-citations";
+import { copyFor, quotaNotice } from "@/lib/copy";
 import { requestDebrief } from "@/lib/request-debrief";
 import { requestExtract } from "@/lib/request-extract";
 import { bindVivaSession } from "@/lib/session-bridge";
+import { loadSettings, saveSettings } from "@/lib/settings";
 import { mergeSpeech } from "@/lib/speech-clean";
 import { verifyCitations } from "@/lib/verify-citations";
 import { hushVoxide } from "@/lib/voxide-client";
-import type { Citation, SessionPhase } from "@/lib/types";
+import type { AppLanguage, Citation, SessionPhase } from "@/lib/types";
 
-const micErrorText: Record<MicFailureReason, string> = {
-  unsupported: "Microphone speech recognition is not supported in this browser.",
-  permission_denied: "Microphone access was denied. Allow microphone permission and try again.",
-  unavailable: "No working microphone was found. Connect a microphone and retry.",
-  network: "Microphone transcription lost connection. Check your network and retry.",
-  start_failed: "Microphone could not start. Check your microphone setup and try again.",
-  unknown: "Microphone failed while listening. Please try again.",
+const micErrorText = {
+  en: copyFor("en").mic,
+  am: copyFor("am").mic,
 };
 
-const apiErrorText: Record<"extract" | "verify" | "debrief", string> = {
-  extract: "Citation extraction service failed. Results may be incomplete.",
-  verify: "Citation verification service failed. Marked as unverified.",
-  debrief: "Debrief service failed. Try again after the network recovers.",
+const apiErrorText = {
+  en: copyFor("en").api,
+  am: copyFor("am").api,
 };
 
 export function Booth() {
@@ -42,20 +39,33 @@ export function Booth() {
   const [checked, setChecked] = useState<Citation[] | null>(null);
   const [debrief, setDebrief] = useState("");
   const [errorText, setErrorText] = useState("");
+  const [language, setLanguage] = useState<AppLanguage>("en");
+  const text = copyFor(language);
 
-  const reportError = useCallback((text: string) => {
-    setErrorText(text);
+  useEffect(() => {
+    const settings = loadSettings();
+    setLanguage(settings.language);
+  }, []);
+
+  const chooseLanguage = (next: AppLanguage) => {
+    setLanguage(next);
+    const current = loadSettings();
+    saveSettings({ name: current.name, language: next });
+  };
+
+  const reportError = useCallback((message: string) => {
+    setErrorText(message);
     if (typeof window === "undefined") return;
     if (typeof SpeechSynthesisUtterance === "undefined" || !("speechSynthesis" in window)) return;
     try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.lang = language === "am" ? "am-ET" : "en-US";
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
     } catch {
       /* keep the written error */
     }
-  }, []);
+  }, [language]);
 
   const resetSession = useCallback(() => {
     liveRef.current = "";
@@ -73,16 +83,20 @@ export function Booth() {
 
     const verified = await verifyCitations(list);
     setChecked(verified.citations);
-    if (verified.failed) reportError(apiErrorText.verify);
+    if (verified.failed) reportError(apiErrorText[language].verify);
 
     const debriefResult = await requestDebrief({
       transcript: spokenText,
       citations: verified.citations,
       seconds,
+      language,
     });
     setDebrief(debriefResult.text);
-    if (debriefResult.failed) reportError(debriefResult.message || apiErrorText.debrief);
-  }, [reportError]);
+    if (debriefResult.failed) {
+      const notice = debriefResult.message === quotaNotice ? copyFor(language).quota : debriefResult.message;
+      reportError(notice || apiErrorText[language].debrief);
+    }
+  }, [language, reportError]);
 
   const finalizeStop = useCallback(() => {
     const spokenText = liveRef.current.trim();
@@ -95,13 +109,13 @@ export function Booth() {
 
     void (async () => {
       const extracted = await requestExtract(spokenText);
-      if (extracted.failed) reportError(apiErrorText.extract);
+      if (extracted.failed) reportError(apiErrorText[language].extract);
       const speech = capSpeechCitations(
         mergeCitations(fromTalk, citationsFromTexts(extracted.queries)),
       );
       await runVerify(speech, spokenText, seconds);
     })();
-  }, [elapsed, reportError, runVerify]);
+  }, [elapsed, language, reportError, runVerify]);
 
   useEffect(() => {
     if (phase !== "talking") return;
@@ -126,7 +140,7 @@ export function Booth() {
         onError: (reason: MicFailureReason) => {
           setTranscript(liveRef.current);
           setPhase("stopped");
-          reportError(micErrorText[reason]);
+          reportError(micErrorText[language][reason]);
         },
       });
     }, 1600);
@@ -135,7 +149,7 @@ export function Booth() {
       window.clearTimeout(wait);
       stopListen?.();
     };
-  }, [phase, reportError]);
+  }, [phase, language, reportError]);
 
   useEffect(() => {
     return bindVivaSession({
@@ -167,14 +181,27 @@ export function Booth() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-8 md:px-12 md:py-10">
-      <header className="border-b border-rule pb-8">
+      <header className="flex items-end justify-between gap-6 border-b border-rule pb-8">
         <h1 className="font-display text-6xl leading-none text-ink md:text-7xl">Viva</h1>
+        <label className="mb-2 shrink-0">
+          <span className="sr-only">{language === "am" ? "ቋንቋ" : "Language"}</span>
+          <select
+            value={language}
+            onChange={(event) => chooseLanguage(event.target.value === "am" ? "am" : "en")}
+            className="rounded-full border border-ink/20 bg-transparent px-3 py-2 text-sm text-ink outline-none"
+          >
+            <option value="en">English</option>
+            <option value="am">አማርኛ</option>
+          </select>
+        </label>
       </header>
 
       <div className="flex flex-col gap-16 pt-14 md:pt-20">
         <SessionBar
           phase={phase}
           elapsedSeconds={elapsed}
+          startLabel={text.start}
+          stopLabel={text.stop}
           onStart={() => {
             resetSession();
             setPhase("talking");
@@ -189,7 +216,7 @@ export function Booth() {
           </p>
         ) : null}
 
-        <DebriefPanel transcript={shownTranscript} citations={checked ?? []} debrief={debrief} />
+        <DebriefPanel transcript={shownTranscript} citations={checked ?? []} debrief={debrief} language={language} />
       </div>
     </div>
   );

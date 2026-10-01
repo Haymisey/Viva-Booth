@@ -93,6 +93,7 @@ type DebriefInput = {
   citations: { text: string; status: string; hitTitle?: string }[];
   seconds: number;
   wordCount: number;
+  language: "en" | "am";
 };
 
 export function talkWordCount(transcript: string) {
@@ -139,6 +140,8 @@ export async function generateDebrief(input: DebriefInput): Promise<string> {
   if (!geminiKey()) return "";
 
   const prompt = `${EXAMINER_PROMPT}
+${input.language === "am" ? `
+The talk was spoken in English. Write every sentence of the note in Amharic (Ge'ez script). Keep the labels exactly KEEP: and FIX: in English. Translate the short-talk fix into Amharic; do not leave that sentence in English. Do not translate the transcript.` : ""}
 
 Duration: ${Math.max(0, Math.round(input.seconds))} seconds
 Word count: ${input.wordCount}

@@ -1,12 +1,6 @@
-import type { CitationStatus } from "@/lib/types";
+import type { AppLanguage, CitationStatus } from "@/lib/types";
 
-const labels: Record<CitationStatus, string> = {
-  pending: "Checking",
-  in_corpus: "In corpus",
-  elsewhere: "Found elsewhere",
-  not_found: "Not found",
-  unverified: "Unverified",
-};
+import { copyFor } from "@/lib/copy";
 
 const tones: Record<CitationStatus, string> = {
   pending: "border-rule text-ink/55",
@@ -16,12 +10,12 @@ const tones: Record<CitationStatus, string> = {
   unverified: "border-rule bg-ink/[0.03] text-ink/60",
 };
 
-export function Badge({ status }: { status: CitationStatus }) {
+export function Badge({ status, language = "en" }: { status: CitationStatus; language?: AppLanguage }) {
   return (
     <span
       className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${tones[status]}`}
     >
-      {labels[status]}
+      {copyFor(language).badge[status]}
     </span>
   );
 }

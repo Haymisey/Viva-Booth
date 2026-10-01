@@ -4,7 +4,7 @@ Team log of what shipped, broke, or got cut. Mirror important entries to STARK C
 
 ## 2026-10-01
 
-- The booth is one page: wordmark, clock, then Transcript, Citations, and Say it like this. No sidebar, no manuscript gate, no examiner card, no tagline on the right. Newsreader is the page font. Voxide stays mounted. Start and Stop still run the browser mic.
+- The booth is one page: wordmark, clock, then Transcript, Citations, and Say it like this. No sidebar, no manuscript gate, no examiner card, no tagline on the right. Newsreader is the page font. Voxide stays mounted. Start and Stop still run the browser mic. English or Amharic sits in the header. Amharic changes the page labels and the examiner note. The microphone still listens in English.
 - The right column is Gemini’s note from the examiner prompt (duration, word count, transcript, citation flags). A short talk is only a fix. The canned Keep / two Fixes / Say stand-in is gone. If the free-tier limit answers 429, the debrief waits for Gemini’s retry time once, then says the free limit is full.
 
 - Examiner questions ask about a claim. They no longer quote the microphone back. A closest title is shown only when it shares real words with what was said. A student describing "what an examiner would ask" is not marked as an answer.

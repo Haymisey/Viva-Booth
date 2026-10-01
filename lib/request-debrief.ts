@@ -13,6 +13,7 @@ export async function requestDebrief(input: {
   transcript: string;
   citations: Citation[];
   seconds: number;
+  language: "en" | "am";
 }) {
   try {
     const res = await fetch("/api/debrief", {
@@ -26,7 +27,7 @@ export async function requestDebrief(input: {
           hitTitle: c.hitTitle,
         })),
         seconds: input.seconds,
-        language: "en",
+        language: input.language,
         questions: [],
       }),
     });

@@ -6,6 +6,8 @@ import type { SessionPhase } from "@/lib/types";
 type Props = {
   phase: SessionPhase;
   elapsedSeconds: number;
+  startLabel: string;
+  stopLabel: string;
   onStart: () => void;
   onStop: () => void;
 };
@@ -18,7 +20,7 @@ export function formatTime(total: number) {
   return `${m}:${s}`;
 }
 
-export function SessionBar({ phase, elapsedSeconds, onStart, onStop }: Props) {
+export function SessionBar({ phase, elapsedSeconds, startLabel, stopLabel, onStart, onStop }: Props) {
   const canStart = phase !== "talking";
   const canStop = phase === "talking";
 
@@ -29,10 +31,10 @@ export function SessionBar({ phase, elapsedSeconds, onStart, onStop }: Props) {
       </p>
       <div className="mt-8 flex gap-3">
         <Button type="button" onClick={onStart} disabled={!canStart} className="min-w-32">
-          Start
+          {startLabel}
         </Button>
         <Button type="button" tone="line" onClick={onStop} disabled={!canStop} className="min-w-32">
-          Stop
+          {stopLabel}
         </Button>
       </div>
     </div>

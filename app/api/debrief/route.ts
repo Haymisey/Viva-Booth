@@ -41,6 +41,7 @@ export async function POST(request: Request) {
       citations: Array.isArray(body.citations) ? body.citations : [],
       seconds,
       wordCount: talkWordCount(transcript),
+      language,
     });
     if (!text) return NextResponse.json({ error: "Debrief failed" }, { status: 502 });
     return NextResponse.json({ text, verdicts: [], followUps: [] });

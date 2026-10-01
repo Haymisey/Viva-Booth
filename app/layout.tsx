@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Newsreader } from "next/font/google";
+import { Newsreader, Noto_Sans_Ethiopic } from "next/font/google";
 import { VoiceRoot } from "@/components/booth/VoiceRoot";
 import "./globals.css";
 
@@ -7,6 +7,12 @@ const newsreader = Newsreader({
   variable: "--font-newsreader",
   subsets: ["latin"],
   style: ["normal", "italic"],
+  weight: ["400", "500"],
+});
+
+const ethiopic = Noto_Sans_Ethiopic({
+  variable: "--font-ethiopic",
+  subsets: ["ethiopic"],
   weight: ["400", "500"],
 });
 
@@ -23,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${newsreader.variable} antialiased`}>
+      <body className={`${newsreader.variable} ${ethiopic.variable} antialiased`}>
         {children}
         <VoiceRoot />
       </body>

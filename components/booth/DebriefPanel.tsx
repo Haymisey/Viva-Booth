@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/Badge";
+import { copyFor } from "@/lib/copy";
 import type { Verdict } from "@/lib/gemini";
-import type { Citation } from "@/lib/types";
+import type { AppLanguage, Citation } from "@/lib/types";
 
 type Props = {
   transcript: string;
   citations: Citation[];
   debrief: string;
+  language?: AppLanguage;
   verdicts?: Verdict[];
 };
 
@@ -55,22 +57,29 @@ function Empty({ children }: { children: ReactNode }) {
   return <p className="text-ink/50">{children}</p>;
 }
 
-export function DebriefPanel({ transcript, citations, debrief, verdicts = [] }: Props) {
+export function DebriefPanel({ transcript, citations, debrief, language = "en", verdicts = [] }: Props) {
   const lines = parseDebrief(debrief);
+  const text = copyFor(language);
+  const heading = (kind: string) => {
+    if (kind === "Keep") return text.keep;
+    if (kind === "Fix") return text.fix;
+    if (kind === "Say") return text.say;
+    return kind;
+  };
 
   return (
     <section className="grid gap-12 md:grid-cols-3 md:gap-0 md:divide-x md:divide-rule">
-      <Pane title="Transcript">
+      <Pane title={text.transcript}>
         {transcript ? (
           <p className="whitespace-pre-wrap">{transcript}</p>
         ) : (
-          <Empty>Nothing spoken yet.</Empty>
+          <Empty>{text.nothingSpoken}</Empty>
         )}
       </Pane>
 
-      <Pane title="Citations">
+      <Pane title={text.citations}>
         {citations.length === 0 ? (
-          <Empty>Sources you name are checked here.</Empty>
+          <Empty>{text.citationsEmpty}</Empty>
         ) : (
           <ul className="flex flex-col gap-4">
             {citations.map((c) => (
@@ -84,23 +93,17 @@ export function DebriefPanel({ transcript, citations, debrief, verdicts = [] }: 
                     <span className="mt-1 block text-sm text-ink/60">{c.hitTitle}</span>
                   ) : null}
                   {c.status === "not_found" && c.closestTitle ? (
-                    <span className="mt-1 block text-sm text-ink/50">Closest: {c.closestTitle}</span>
+                    <span className="mt-1 block text-sm text-ink/50">{text.closest}: {c.closestTitle}</span>
                   ) : null}
                 </span>
-                <Badge status={c.status} />
+                <Badge status={c.status} language={language} />
               </li>
             ))}
           </ul>
         )}
       </Pane>
 
-      <Pane
-        title={
-          <>
-            <em>Say it</em> like this
-          </>
-        }
-      >
+      <Pane title={language === "am" ? text.sayIt : <><em>Say it</em> like this</>}>
         {verdicts.length > 0 ? (
           <div className="flex flex-col gap-5">
             {verdicts.map((v, i) => (
@@ -114,13 +117,13 @@ export function DebriefPanel({ transcript, citations, debrief, verdicts = [] }: 
             ))}
           </div>
         ) : lines.length === 0 ? (
-          <Empty>Stop the clock. The note lands here.</Empty>
+          <Empty>{text.noteEmpty}</Empty>
         ) : (
           <div className="flex flex-col gap-4">
             {lines.map((line, i) => (
               <div key={i}>
                 {line.kind ? (
-                  <p className="font-display text-lg text-ink">{line.kind}.</p>
+                  <p className="font-display text-lg text-ink">{heading(line.kind)}.</p>
                 ) : null}
                 <p className={line.kind === "Keep" || line.kind === "Say" ? "font-display text-lg italic text-ink" : ""}>
                   {line.text}
