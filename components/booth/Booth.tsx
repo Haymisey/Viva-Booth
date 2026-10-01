@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { DebriefPanel } from "@/components/booth/DebriefPanel";
 import { ExaminerPackCard } from "@/components/booth/ExaminerPackCard";
+import { ExaminerQuestions } from "@/components/booth/ExaminerQuestions";
 import { ManuscriptForm } from "@/components/booth/ManuscriptForm";
 import { PackLibrary } from "@/components/booth/PackLibrary";
 import { SessionBar } from "@/components/booth/SessionBar";
@@ -18,6 +19,7 @@ import { emptyCitations, emptyManuscript } from "@/lib/mock";
 import { buildPack, loadPack, savePack } from "@/lib/pack";
 import { requestDebrief } from "@/lib/request-debrief";
 import { requestExtract } from "@/lib/request-extract";
+import { requestQuestions } from "@/lib/request-questions";
 import { bindVivaSession } from "@/lib/session-bridge";
 import { mergeSpeech } from "@/lib/speech-clean";
 import { verifyCitations } from "@/lib/verify-citations";
@@ -106,6 +108,8 @@ export function Booth() {
   const [language, setLanguage] = useState<AppLanguage>("en");
   const [errorText, setErrorText] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [take, setTake] = useState<1 | 2>(1);
+  const [questions, setQuestions] = useState<[string, string] | null>(null);
 
   const speak = useCallback((text: string) => {
     if (typeof window === "undefined") return;
@@ -119,6 +123,23 @@ export function Booth() {
       window.speechSynthesis.speak(utterance);
     } catch {
       /* keep visual error only */
+    }
+  }, [language]);
+
+  const speakQuestions = useCallback((pair: [string, string]) => {
+    if (typeof window === "undefined") return;
+    if (typeof SpeechSynthesisUtterance === "undefined" || !("speechSynthesis" in window)) {
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      for (const text of pair) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = recognitionLang[language];
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch {
+      /* visual questions still show */
     }
   }, [language]);
 
@@ -161,6 +182,7 @@ export function Booth() {
     });
     setDebrief(debriefResult.text);
     if (debriefResult.failed) reportApiError("debrief");
+    return verified.citations;
   }, [language, reportApiError]);
 
   const finalizeStop = useCallback(() => {
@@ -183,9 +205,20 @@ export function Booth() {
       const speech = capSpeechCitations(mergeCitations(fromTalk, extra));
       setSpoken(speech);
 
-      await runVerify(mergeCitations(fromPack, speech), spokenText, abstract);
+      const checkedList = await runVerify(mergeCitations(fromPack, speech), spokenText, abstract);
+      if (take === 1) {
+        const pair = await requestQuestions({
+          language,
+          abstract,
+          citations: checkedList,
+        });
+        if (pair) {
+          setQuestions(pair);
+          speakQuestions(pair);
+        }
+      }
     })();
-  }, [live, pack, reportApiError, runVerify]);
+  }, [live, pack, reportApiError, runVerify, take, language, speakQuestions]);
 
   useEffect(() => {
     const stored = loadPack();
@@ -240,6 +273,7 @@ export function Booth() {
           };
         }
         resetSession();
+        if (phase === "stopped") setTake(2);
         setPhase("talking");
         return { ok: true, message: "Practice started." };
       },
@@ -267,6 +301,8 @@ export function Booth() {
     setLibrary(listPacks());
     setPhase("prepared");
     setFormOpen(false);
+    setTake(1);
+    setQuestions(null);
     resetSession();
     if (mode === "prepared") {
       void runVerify(next.citations, "", next.abstract);
@@ -280,6 +316,8 @@ export function Booth() {
     savePack(current);
     setPhase("prepared");
     setFormOpen(false);
+    setTake(1);
+    setQuestions(null);
     resetSession();
     if (current.mode === "prepared") {
       void runVerify(current.citations, "", current.abstract);
@@ -334,12 +372,15 @@ export function Booth() {
         phase={phase}
         elapsedSeconds={elapsed}
         onStart={() => {
+          if (phase === "stopped") setTake(2);
           resetSession();
           setPhase("talking");
           hushVoxide();
         }}
         onStop={finalizeStop}
       />
+
+      <ExaminerQuestions questions={questions} />
 
       {errorText ? (
         <p role="alert" className="-mt-6 border-t border-rule pt-4 text-sm leading-relaxed text-rust">

@@ -19,6 +19,7 @@ export type Citation = {
   status: CitationStatus;
   source: "manuscript" | "speech";
   hitTitle?: string;
+  hitAbstract?: string;
 };
 
 export type ExaminerPack = {

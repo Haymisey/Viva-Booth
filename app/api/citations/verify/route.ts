@@ -9,6 +9,7 @@ type Row = {
   query: string;
   status: CitationStatus;
   title?: string;
+  abstract?: string;
 };
 
 export async function POST(request: Request) {
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
       query,
       status: "in_corpus",
       title: match.title,
+      abstract: match.abstract,
     });
   }
 

@@ -1,7 +1,7 @@
 {
   "project_name": "Viva booth (working title)",
   "purpose": "Who owns which slice. Claim in a PR. One owner per feature.",
-  "last_updated": "2026-09-27",
+  "last_updated": "2026-10-01",
   "status_values": ["unclaimed", "claimed", "released"],
   "features": [
     {
@@ -86,11 +86,11 @@
       "id": "FEAT-007",
       "name": "Viva questions + second take",
       "phase": "P7",
-      "status": "unclaimed",
-      "owner": null,
-      "branch": null,
-      "claimed_at": null,
-      "released_at": null,
+      "status": "released",
+      "owner": "Haymanot Seyoum",
+      "branch": "feat/006",
+      "claimed_at": "2026-10-01T09:00:00Z",
+      "released_at": "2026-10-01T09:10:00Z",
       "depends_on": ["FEAT-005", "FEAT-006"],
       "deliverables": ["app/"],
       "verification": "Two spoken examiner questions from Scholarxiv hits (or their abstract if none); user can start a second take"

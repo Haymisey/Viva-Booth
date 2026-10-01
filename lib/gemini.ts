@@ -179,3 +179,105 @@ JSON only:
   }
   return fallbackDebrief(input);
 }
+
+export type QuestionHit = {
+  title: string;
+  abstract?: string;
+};
+
+export type QuestionInput = {
+  language: "en" | "am";
+  abstract: string;
+  hits: QuestionHit[];
+};
+
+export type QuestionPair = [string, string];
+
+export function fallbackExaminerQuestions(input: QuestionInput): QuestionPair {
+  const am = input.language === "am";
+  const t0 = input.hits[0]?.title;
+  const t1 = input.hits[1]?.title ?? t0;
+  if (t0) {
+    if (am) {
+      return [
+        `“${t0}” ጠቅሰሃል። ያ ሥራ በትክክል ምን ይከራከራል?`,
+        t1 && t1 !== t0
+          ? `“${t1}” የተናገርከውን ዓረፍተ ነገር እንዴት ይደግፋል?`
+          : "ያ ምንጭ የተናገርከውን ዓረፍተ ነገር እንዴት ይደግፋል?",
+      ];
+    }
+    return [
+      `You cited ${t0}. What does that work actually claim?`,
+      t1 && t1 !== t0
+        ? `How does ${t1} support the sentence you just said?`
+        : "How does that source support the sentence you just said?",
+    ];
+  }
+  const snippet = input.abstract.replace(/\s+/g, " ").trim().slice(0, 180);
+  if (snippet) {
+    if (am) {
+      return [
+        "ከዝግጅት አብስትራክትህ፦ የምርምር ጥያቄህ ምንድን ነው?",
+        "ፈታኝ ምን ሊጠራጠር ይችላል?",
+      ];
+    }
+    const clipped = input.abstract.trim().length > 180 ? `${snippet}…` : snippet;
+    return [
+      `Your abstract says: “${clipped}”. What is the one claim?`,
+      "What would an examiner doubt in that abstract?",
+    ];
+  }
+  if (am) {
+    return ["የዚህ ንግግር አንዱ ክስ ምንድን ነው?", "ፈታኝ ምን ሊጠይቅ ይችላል?"];
+  }
+  return [
+    "What is the one claim of this talk?",
+    "What would an examiner doubt?",
+  ];
+}
+
+function groundedQuestion(text: string, hits: QuestionHit[]) {
+  if (hits.length === 0) return true;
+  const hay = text.toLowerCase();
+  return hits.some((h) => hay.includes(h.title.toLowerCase()));
+}
+
+export async function generateExaminerQuestions(input: QuestionInput): Promise<QuestionPair> {
+  const fallback = fallbackExaminerQuestions(input);
+  if (!geminiKey()) return fallback;
+
+  const titles = input.hits.map((h) => h.title);
+  const prompt = `You are a thesis examiner. Write exactly TWO short spoken questions.
+
+Rules:
+- Never invent a paper, author, or year.
+- You may only name these confirmed titles: ${titles.join("; ") || "(none — do not name a paper)"}.
+- If there are confirmed titles, each question must name at least one of them.
+- If there are none, ask only from the packed abstract or the talk as a whole. Do not name a paper.
+- Respond in ${input.language === "am" ? "Amharic (Ge'ez script)" : "English"}.
+
+Packed abstract:
+${input.abstract || "(none)"}
+
+Confirmed papers:
+${input.hits.map((h) => `- ${h.title}${h.abstract ? `\n  abstract: ${h.abstract.slice(0, 400)}` : ""}`).join("\n") || "(none)"}
+
+JSON only:
+{"questions":["…","…"]}`;
+
+  const raw = await generateJson(prompt, 0.3);
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(stripFence(raw)) as { questions?: unknown };
+    if (!Array.isArray(parsed.questions) || parsed.questions.length < 2) return fallback;
+    const a = typeof parsed.questions[0] === "string" ? parsed.questions[0].trim() : "";
+    const b = typeof parsed.questions[1] === "string" ? parsed.questions[1].trim() : "";
+    if (!a || !b) return fallback;
+    if (!groundedQuestion(a, input.hits) || !groundedQuestion(b, input.hits)) {
+      return fallback;
+    }
+    return [a, b];
+  } catch {
+    return fallback;
+  }
+}

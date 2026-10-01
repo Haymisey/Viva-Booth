@@ -4,6 +4,7 @@ Team log of what shipped, broke, or got cut. Mirror important entries to STARK C
 
 ## 2026-10-01
 
+- FEAT-007: two examiner questions from Scholarxiv in-corpus titles (or the packed abstract). Spoken in-browser. Start again is a second take against the same questions.
 - EthioDeploy: production start (`next start` on `0.0.0.0`), `/api/health`, Dockerfile + Nixpacks. Do not run `next dev` on the live box.
 
 ## 2026-09-27
@@ -37,10 +38,6 @@ Hosted on EthioDeploy so it is reachable inside Ethiopia without a VPN or a cred
 - `CHANGELOG.md` — this entry; previous entries 2026-09-22 through 2026-09-24 already captured per-feature releases.
 - `README.md` — Ideation section added below the run instructions.
 - `feature_lock.json` — FEAT-009 set to `released`.
-
-## 2026-10-01
-
-- EthioDeploy: production start (`next start` on `0.0.0.0:3000`), `/api/health`, Dockerfile + Nixpacks. Do not run `next dev` on the live box.
 
 ## 2026-09-24
 
