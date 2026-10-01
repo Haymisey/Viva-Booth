@@ -18,15 +18,27 @@ const markLabel: Record<Verdict["mark"], string> = {
 
 type DebriefLine = { kind: string; text: string };
 
+function sectionLabel(kind: string) {
+  const name = kind.toLowerCase();
+  if (name === "keep" || name === "fix" || name === "say") {
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }
+  return kind;
+}
+
 function parseDebrief(text: string): DebriefLine[] {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const m = line.match(/^(Keep|Fix|Say):\s*(.*)$/i);
-      return m ? { kind: m[1], text: m[2] } : { kind: "", text: line };
-    });
+  const out: DebriefLine[] = [];
+  for (const line of text.split("\n").map((row) => row.trim()).filter(Boolean)) {
+    const match = line.replace(/\*/g, "").trim().match(/^(Keep|Fix|Say):\s*(.*)$/i);
+    if (match) {
+      out.push({ kind: sectionLabel(match[1]), text: match[2] });
+      continue;
+    }
+    const previous = out[out.length - 1];
+    if (previous) previous.text = `${previous.text} ${line}`.trim();
+    else out.push({ kind: "", text: line });
+  }
+  return out;
 }
 
 function Pane({ title, children }: { title: ReactNode; children: ReactNode }) {
@@ -47,7 +59,7 @@ export function DebriefPanel({ transcript, citations, debrief, verdicts = [] }: 
   const lines = parseDebrief(debrief);
 
   return (
-    <section className="grid gap-12 border-t border-rule pt-10 md:grid-cols-3 md:gap-0 md:divide-x md:divide-rule">
+    <section className="grid gap-12 md:grid-cols-3 md:gap-0 md:divide-x md:divide-rule">
       <Pane title="Transcript">
         {transcript ? (
           <p className="whitespace-pre-wrap">{transcript}</p>
@@ -58,7 +70,7 @@ export function DebriefPanel({ transcript, citations, debrief, verdicts = [] }: 
 
       <Pane title="Citations">
         {citations.length === 0 ? (
-          <Empty>Scholarxiv marks each source in corpus, not found, or unverified. Never invented.</Empty>
+          <Empty>Sources you name are checked here.</Empty>
         ) : (
           <ul className="flex flex-col gap-4">
             {citations.map((c) => (
@@ -67,9 +79,6 @@ export function DebriefPanel({ transcript, citations, debrief, verdicts = [] }: 
                 className="flex items-start justify-between gap-3 border-l-2 border-rule pl-3"
               >
                 <span className="min-w-0">
-                  <span className="mb-0.5 block text-xs font-medium uppercase tracking-[0.1em] text-ink/50">
-                    {c.source === "speech" ? "From talk" : "From pack"}
-                  </span>
                   <span className="text-ink">“{c.text}”</span>
                   {c.hitTitle ? (
                     <span className="mt-1 block text-sm text-ink/60">{c.hitTitle}</span>
@@ -105,7 +114,7 @@ export function DebriefPanel({ transcript, citations, debrief, verdicts = [] }: 
             ))}
           </div>
         ) : lines.length === 0 ? (
-          <Empty>Keep one thing. Fix two. One line to say instead.</Empty>
+          <Empty>Stop the clock. The note lands here.</Empty>
         ) : (
           <div className="flex flex-col gap-4">
             {lines.map((line, i) => (
@@ -113,8 +122,8 @@ export function DebriefPanel({ transcript, citations, debrief, verdicts = [] }: 
                 {line.kind ? (
                   <p className="font-display text-lg text-ink">{line.kind}.</p>
                 ) : null}
-                <p className={line.kind === "Say" ? "font-display text-lg italic text-ink" : ""}>
-                  {line.kind === "Say" ? `“${line.text}”` : line.text}
+                <p className={line.kind === "Keep" || line.kind === "Say" ? "font-display text-lg italic text-ink" : ""}>
+                  {line.text}
                 </p>
               </div>
             ))}

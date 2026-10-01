@@ -14,12 +14,22 @@ function geminiUrl() {
 }
 
 function stripFence(raw: string) {
-  return raw.replace(/^```json\s*|\s*```$/g, "").trim();
+  return raw.replace(/^```[a-z]*\s*/i, "").replace(/\s*```$/, "").trim();
 }
 
-async function generateJson(prompt: string, temperature: number) {
+type GeminiCall = { text: string; status: number; detail: string };
+
+function retryAfterSeconds(detail: string) {
+  const match = detail.match(/retry in ([0-9.]+)\s*s/i);
+  if (!match) return 0;
+  const seconds = Math.ceil(Number(match[1]));
+  if (!Number.isFinite(seconds) || seconds < 1) return 0;
+  return Math.min(seconds + 1, 70);
+}
+
+async function callGemini(prompt: string, temperature: number): Promise<GeminiCall> {
   const key = geminiKey();
-  if (!key) return "";
+  if (!key) return { text: "", status: 0, detail: "" };
   const res = await fetch(geminiUrl(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -28,70 +38,67 @@ async function generateJson(prompt: string, temperature: number) {
       generationConfig: { temperature },
     }),
   });
-  if (!res.ok) return "";
+  if (!res.ok) {
+    const detail = await res.text();
+    console.error("Gemini debrief failed", res.status, detail.slice(0, 500));
+    return { text: "", status: res.status, detail };
+  }
   const data = (await res.json()) as GeminiJson;
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  if (!text) console.error("Gemini debrief returned no text");
+  return { text, status: res.status, detail: "" };
 }
+
+async function generateJson(prompt: string, temperature: number) {
+  const result = await callGemini(prompt, temperature);
+  return result.text;
+}
+
+const EXAMINER_PROMPT = `You are an expert, world-class presentation coach. Your users range from young students to university professors. Your goal is to help them craft an A+ presentation.
+
+Your persona is an objective, helpful, calm, and specific examiner.
+- Never use shaming language. Never say "you failed."
+- Be direct, clear, and highly constructive.
+- Do not use fake, polished filler lines (e.g., do not say "This work is a testament to...").
+
+You will be provided with the user's transcript, the duration (in seconds), the word count, and (if applicable) citation check flags (e.g., in_corpus, not_found, elsewhere, unverified).
+
+CRITICAL RULES REGARDING FACTS AND CITATIONS:
+1. NEVER invent or hallucinate a paper, author, year, or title.
+2. Only quote names exactly as you heard/read them in the transcript.
+3. Citation flags mean ONLY what the check returned. Do not interpret them beyond their literal meaning.
+
+EVALUATION LOGIC (Follow this strictly based on the provided time/word count):
+
+SCENARIO A: TOO SHORT (Under 20 seconds OR under 40 words)
+- DO NOT praise the user. Do not provide a "KEEP" section.
+- Calmly state that the talk was too short to evaluate properly.
+- Give them this exact, simple fix: "Try again. Next time, say three things: 1) What the question is, 2) What you did, and 3) What you found. Then stop."
+- Output ONLY a "FIX:" section.
+
+SCENARIO B: THIN TALK (Over 20s/40w, but lacks depth or substance)
+- Provide EXACTLY ONE "FIX:".
+- Focus on the single most obvious missing piece (e.g., Missing the result, missing who the audience is, or no clear ending).
+- Do not invent a second fix just to fill space. Keep it brief and focused.
+
+SCENARIO C: REAL TALK (Sufficient length and fully developed)
+- Focus on the SHAPE of the presentation first (e.g., Was the opening too long? Did the main question come too late? Was the ending thin?).
+- Format your response using "KEEP:" (one thing that worked well regarding structure/delivery) and "FIX:" (how to improve the shape).
+- Address citations ONLY if the user explicitly named a source in the transcript. If they did, use the provided citation flags to calmly note if their sources were verified or not.
+
+Always format your final output cleanly. Remember: Your job is to help them get an A+ by mastering structure and clarity, not by flattering them.`;
 
 type DebriefInput = {
   transcript: string;
-  abstract: string;
   citations: { text: string; status: string; hitTitle?: string }[];
-  language: "en" | "am";
+  seconds: number;
+  wordCount: number;
 };
 
-export type DebriefBody = {
-  keep: string;
-  fixes: [string, string];
-  say: string;
-};
-
-export function formatDebrief(body: DebriefBody) {
-  return `Keep: ${body.keep}\nFix: ${body.fixes[0]}\nFix: ${body.fixes[1]}\nSay: ${body.say}`;
-}
-
-export function fallbackDebrief(input: DebriefInput): DebriefBody {
-  const am = input.language === "am";
-  const ok = input.citations.filter((c) => c.status === "in_corpus");
-  const bad = input.citations.filter(
-    (c) => c.status === "not_found" || c.status === "unverified",
-  );
-  const keep = am
-    ? ok[0]
-      ? `በScholarxiv የተገኘ ምንጭ ጠቅሰሃል፦ ${ok[0].hitTitle || ok[0].text}.`
-      : "ንግግርህ ግልጽ የሆነ መስመር አለው።"
-    : ok[0]
-      ? `You named a source Scholarxiv can see: ${ok[0].hitTitle || ok[0].text}.`
-      : "You kept a clear through-line in the talk.";
-  const fixes: [string, string] = am
-    ? [
-        bad[0]
-          ? `“${bad[0].text}” ላይ አትመስረት — Scholarxiv ይህን ምንጭ አላረጋገጠም።`
-          : "የምርምር ጥያቄህን በአንድ አረፍተ ነገር ግለጽ።",
-        bad[1]
-          ? `“${bad[1].text}” ከፓነሉ በፊት አረጋግጥ ወይም ተው።`
-          : input.abstract
-            ? "እያንዳንዱን ክስ ከዝግጅት አብስትራክትህ ጋር አያይዝ።"
-            : "ዓመት እና ጆርናል እውነተኛ ሲሆን ብቻ ጥቀስ።",
-      ]
-    : [
-        bad[0]
-          ? `Do not lean on “${bad[0].text}” — Scholarxiv did not confirm that source.`
-          : "State the research question in one sentence.",
-        bad[1]
-          ? `Drop or verify “${bad[1].text}” before the panel.`
-          : input.abstract
-            ? "Tie each claim back to the abstract you packed."
-            : "Name year and venue only when the paper is real.",
-      ];
-  const say = am
-    ? ok[0]?.hitTitle
-      ? `ይህ ሥራ ${ok[0].hitTitle} ላይ ይመሠረታል።`
-      : "ይህ ሥራ አንድ ጥያቄ ይጠይቃል እና ማሳየት ከምንችለው ምንጭ ይመልሳል።"
-    : ok[0]?.hitTitle
-      ? `This work follows ${ok[0].hitTitle}.`
-      : "This work asks one question and answers it from sources we can show.";
-  return { keep, fixes, say };
+export function talkWordCount(transcript: string) {
+  const clean = transcript.trim();
+  if (!clean) return 0;
+  return clean.split(/\s+/).length;
 }
 
 export async function extractCitationAttempts(transcript: string): Promise<string[]> {
@@ -128,58 +135,32 @@ JSON only:
   }
 }
 
-export async function generateDebrief(input: DebriefInput): Promise<DebriefBody> {
-  if (!geminiKey()) return fallbackDebrief(input);
+export async function generateDebrief(input: DebriefInput): Promise<string> {
+  if (!geminiKey()) return "";
 
-  const confirmed = input.citations
-    .filter((c) => c.status === "in_corpus")
-    .map((c) => c.hitTitle || c.text);
+  const prompt = `${EXAMINER_PROMPT}
 
-  const prompt = `You coach a student for a second take. Use ONLY the talk, packed abstract, and Scholarxiv statuses. Never invent a paper, author, or year.
+Duration: ${Math.max(0, Math.round(input.seconds))} seconds
+Word count: ${input.wordCount}
 
-in_corpus means Scholarxiv found a matching title. not_found means Scholarxiv did not confirm that source. unverified means the check failed. These are not a student bibliography.
+Transcript:
+${input.transcript.trim() || "(none)"}
 
-Tone: calm, specific, useful. No shame. Do not say unacceptable, only, entire talk, or you have failed.
-Quote names as heard in the talk. Do not "correct" Vans to Vance or invent a real title.
-Respond in ${input.language === "am" ? "Amharic (Ge'ez script)" : "English"}.
+Citations:
+${input.citations.map((c) => `- ${c.text} [${c.status}]${c.hitTitle ? ` hit:${c.hitTitle}` : ""}`).join("\n") || "(none)"}`;
 
-keep: one short sentence about what they did well (usually an in_corpus source).
-fixes: two short sentences. For not_found or unverified, say not to cite that heard phrase until Scholarxiv can see it.
-say: ONE sentence they can speak next time ("This work…"). Use only confirmed titles: ${confirmed.join("; ") || "(none — do not name a paper)"}.
-
-Abstract:
-${input.abstract || "(none)"}
-
-Talk:
-${input.transcript || "(none)"}
-
-Scholarxiv:
-${input.citations.map((c) => `- ${c.text} [${c.status}]${c.hitTitle ? ` hit:${c.hitTitle}` : ""}`).join("\n") || "(none)"}
-
-JSON only:
-{"keep":"…","fixes":["…","…"],"say":"…"}`;
-
-  const raw = await generateJson(prompt, 0.3);
-  if (!raw) return fallbackDebrief(input);
-  const json = stripFence(raw);
-  try {
-    const parsed = JSON.parse(json) as Partial<DebriefBody>;
-    if (
-      typeof parsed.keep === "string" &&
-      Array.isArray(parsed.fixes) &&
-      parsed.fixes.length >= 2 &&
-      typeof parsed.say === "string"
-    ) {
-      return {
-        keep: parsed.keep,
-        fixes: [parsed.fixes[0], parsed.fixes[1]],
-        say: parsed.say,
-      };
+  let result = await callGemini(prompt, 0.2);
+  if (!result.text && result.status === 429) {
+    const wait = retryAfterSeconds(result.detail);
+    if (wait > 0) {
+      await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+      result = await callGemini(prompt, 0.2);
     }
-  } catch {
-    /* fall through */
   }
-  return fallbackDebrief(input);
+  if (!result.text && result.status === 429) {
+    throw new Error("QUOTA");
+  }
+  return stripFence(result.text);
 }
 
 export type QuestionHit = {

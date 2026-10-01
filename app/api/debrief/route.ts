@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { formatDebrief, generateDebrief, judgeAnswers } from "@/lib/gemini";
+import { generateDebrief, judgeAnswers, talkWordCount } from "@/lib/gemini";
 
 export const runtime = "nodejs";
 
@@ -12,6 +12,7 @@ export async function POST(request: Request) {
       language?: string;
       questions?: unknown;
       followUps?: boolean;
+      seconds?: number;
     };
     const language = body.language === "am" ? "am" : "en";
     const questions = Array.isArray(body.questions)
@@ -33,14 +34,25 @@ export async function POST(request: Request) {
       ].join("\n");
       return NextResponse.json({ text, verdicts: judged.verdicts, followUps: judged.followUps });
     }
-    const result = await generateDebrief({
-      transcript: body.transcript ?? "",
-      abstract: body.abstract ?? "",
+    const transcript = body.transcript ?? "";
+    const seconds = typeof body.seconds === "number" && Number.isFinite(body.seconds) ? body.seconds : 0;
+    const text = await generateDebrief({
+      transcript,
       citations: Array.isArray(body.citations) ? body.citations : [],
-      language,
+      seconds,
+      wordCount: talkWordCount(transcript),
     });
-    return NextResponse.json({ text: formatDebrief(result), verdicts: [], followUps: [] });
-  } catch {
-    return NextResponse.json({ error: "Debrief failed" }, { status: 500 });
+    if (!text) return NextResponse.json({ error: "Debrief failed" }, { status: 502 });
+    return NextResponse.json({ text, verdicts: [], followUps: [] });
+  } catch (err) {
+    const quota = err instanceof Error && err.message === "QUOTA";
+    return NextResponse.json(
+      {
+        error: quota
+          ? "Gemini's free limit is full. Wait a minute, then press Stop again."
+          : "Debrief failed",
+      },
+      { status: quota ? 429 : 500 },
+    );
   }
 }
