@@ -4,9 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0",
     "lint": "eslint"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "@voxide/react": "^0.8.0",
