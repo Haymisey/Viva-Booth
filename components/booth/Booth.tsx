@@ -1,10 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DebriefPanel } from "@/components/booth/DebriefPanel";
-import { ExaminerPackCard } from "@/components/booth/ExaminerPackCard";
-import { ManuscriptForm } from "@/components/booth/ManuscriptForm";
-import { PackLibrary } from "@/components/booth/PackLibrary";
 import { SessionBar } from "@/components/booth/SessionBar";
 import { startBrowserListen, type MicFailureReason } from "@/lib/browser-listen";
 import {
@@ -13,192 +10,112 @@ import {
   extractSpeechCitations,
   mergeCitations,
 } from "@/lib/extract-citations";
-import { listPacks, rememberPack } from "@/lib/library";
-import { emptyCitations, emptyManuscript } from "@/lib/mock";
-import { buildPack, loadPack, savePack } from "@/lib/pack";
+import { copyFor, quotaNotice } from "@/lib/copy";
 import { requestDebrief } from "@/lib/request-debrief";
 import { requestExtract } from "@/lib/request-extract";
 import { bindVivaSession } from "@/lib/session-bridge";
+import { loadSettings, saveSettings } from "@/lib/settings";
 import { mergeSpeech } from "@/lib/speech-clean";
 import { verifyCitations } from "@/lib/verify-citations";
 import { hushVoxide } from "@/lib/voxide-client";
-import type {
-  AppLanguage,
-  Citation,
-  ExaminerPack,
-  Manuscript,
-  SessionMode,
-  SessionPhase,
-} from "@/lib/types";
+import type { AppLanguage, Citation, SessionPhase } from "@/lib/types";
 
-const recognitionLang: Record<AppLanguage, string> = {
-  en: "en-US",
-  am: "am-ET",
+const micErrorText = {
+  en: copyFor("en").mic,
+  am: copyFor("am").mic,
 };
 
-const labels: Record<AppLanguage, string> = {
-  en: "English",
-  am: "አማርኛ",
+const apiErrorText = {
+  en: copyFor("en").api,
+  am: copyFor("am").api,
 };
-
-const micErrorText: Record<AppLanguage, Record<MicFailureReason, string>> = {
-  en: {
-    unsupported: "Microphone speech recognition is not supported in this browser.",
-    permission_denied: "Microphone access was denied. Allow microphone permission and try again.",
-    unavailable: "No working microphone was found. Connect a microphone and retry.",
-    network: "Microphone transcription lost connection. Check your network and retry.",
-    start_failed: "Microphone could not start. Check your microphone setup and try again.",
-    unknown: "Microphone failed while listening. Please try again.",
-  },
-  am: {
-    unsupported: "በዚህ ብራውዘር የማይክሮፎን ንግግር መለየት አይደገፍም።",
-    permission_denied: "የማይክሮፎን ፍቃድ ተከልክሏል። ፍቃድ ሰጥተህ እንደገና ሞክር።",
-    unavailable: "የሚሰራ ማይክሮፎን አልተገኘም። ማይክሮፎን አገናኝ እና ድገም።",
-    network: "የማይክሮፎን ጽሑፍ አገልግሎት ኔትወርክ ጠፍቷል። ኔትወርክህን አረጋግጥ እና ድገም።",
-    start_failed: "ማይክሮፎን መጀመር አልተቻለም። ቅንብሮችን አረጋግጥ እና ድገም።",
-    unknown: "ሲያዳምጥ የማይክሮፎን ችግኝ ተፈጥሯል። እባክህ ድገም።",
-  },
-};
-
-const apiErrorText: Record<AppLanguage, Record<"extract" | "verify" | "debrief", string>> = {
-  en: {
-    extract: "Citation extraction service failed. Results may be incomplete.",
-    verify: "Citation verification service failed. Marked as unverified.",
-    debrief: "Debrief service failed. Try again after the network recovers.",
-  },
-  am: {
-    extract: "የማጣቀሻ ማውጫ አገልግሎት አልሰራም። ውጤቱ ያልተሟላ ሊሆን ይችላል።",
-    verify: "የማጣቀሻ ማረጋገጫ አገልግሎት አልሰራም። ሁሉም እንደ unverified ተመዝግቧል።",
-    debrief: "የdebrief አገልግሎት አልሰራም። ኔትወርክ ከተመለሰ በኋላ ድገም።",
-  },
-};
-
-function manuscriptFromPack(pack: ExaminerPack): Manuscript {
-  const references: Manuscript["references"] = ["", "", "", "", ""];
-  pack.citations.forEach((c, i) => {
-    if (i < 5) references[i] = c.text;
-  });
-  return {
-    title: pack.title,
-    question: pack.question,
-    abstract: pack.abstract,
-    references,
-  };
-}
-
-function withId(pack: ExaminerPack): ExaminerPack {
-  if (pack.id) return pack;
-  return { ...pack, id: crypto.randomUUID() };
-}
 
 export function Booth() {
-  const [manuscript, setManuscript] = useState<Manuscript>(emptyManuscript);
-  const [pack, setPack] = useState<ExaminerPack | null>(null);
-  const [library, setLibrary] = useState<ExaminerPack[]>([]);
-  const [formOpen, setFormOpen] = useState(true);
   const [phase, setPhase] = useState<SessionPhase>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [live, setLive] = useState("");
+  const liveRef = useRef("");
   const [transcript, setTranscript] = useState("");
-  const [spoken, setSpoken] = useState<Citation[]>([]);
   const [checked, setChecked] = useState<Citation[] | null>(null);
   const [debrief, setDebrief] = useState("");
-  const [language, setLanguage] = useState<AppLanguage>("en");
   const [errorText, setErrorText] = useState("");
-  const [hydrated, setHydrated] = useState(false);
+  const [language, setLanguage] = useState<AppLanguage>("en");
+  const text = copyFor(language);
 
-  const speak = useCallback((text: string) => {
+  useEffect(() => {
+    const settings = loadSettings();
+    setLanguage(settings.language);
+  }, []);
+
+  const chooseLanguage = (next: AppLanguage) => {
+    setLanguage(next);
+    const current = loadSettings();
+    saveSettings({ name: current.name, language: next });
+  };
+
+  const reportError = useCallback((message: string) => {
+    setErrorText(message);
     if (typeof window === "undefined") return;
-    if (typeof SpeechSynthesisUtterance === "undefined" || !("speechSynthesis" in window)) {
-      return;
-    }
+    if (typeof SpeechSynthesisUtterance === "undefined" || !("speechSynthesis" in window)) return;
     try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = recognitionLang[language];
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.lang = language === "am" ? "am-ET" : "en-US";
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
     } catch {
-      /* keep visual error only */
+      /* keep the written error */
     }
   }, [language]);
 
-  const reportError = useCallback((text: string) => {
-    setErrorText(text);
-    speak(text);
-  }, [speak]);
-
-  const reportMicError = useCallback((reason: MicFailureReason) => {
-    reportError(micErrorText[language][reason]);
-  }, [language, reportError]);
-
-  const reportApiError = useCallback((kind: "extract" | "verify" | "debrief") => {
-    reportError(apiErrorText[language][kind]);
-  }, [language, reportError]);
-
   const resetSession = useCallback(() => {
+    liveRef.current = "";
     setLive("");
     setTranscript("");
-    setSpoken([]);
     setChecked(null);
     setDebrief("");
     setElapsed(0);
     setErrorText("");
   }, []);
 
-  const runVerify = useCallback(async (list: Citation[], spokenText: string, abstract: string) => {
+  const runVerify = useCallback(async (list: Citation[], spokenText: string, seconds: number) => {
     setChecked(list);
     setDebrief("");
 
     const verified = await verifyCitations(list);
     setChecked(verified.citations);
-    if (verified.failed) reportApiError("verify");
+    if (verified.failed) reportError(apiErrorText[language].verify);
 
     const debriefResult = await requestDebrief({
       transcript: spokenText,
-      abstract,
       citations: verified.citations,
+      seconds,
       language,
     });
     setDebrief(debriefResult.text);
-    if (debriefResult.failed) reportApiError("debrief");
-  }, [language, reportApiError]);
+    if (debriefResult.failed) {
+      const notice = debriefResult.message === quotaNotice ? copyFor(language).quota : debriefResult.message;
+      reportError(notice || apiErrorText[language].debrief);
+    }
+  }, [language, reportError]);
 
   const finalizeStop = useCallback(() => {
-    const spokenText = live.trim();
-    const fromTalk = extractSpeechCitations(spokenText);
+    const spokenText = liveRef.current.trim();
+    const seconds = elapsed;
     setTranscript(spokenText);
-    setSpoken(fromTalk);
     setPhase("stopped");
-
-    const fromPack = pack && pack.mode === "prepared" ? pack.citations : emptyCitations;
-    const abstract = pack?.abstract ?? "";
-    setChecked(mergeCitations(fromPack, fromTalk));
+    const fromTalk = extractSpeechCitations(spokenText);
+    setChecked(fromTalk);
     setDebrief("");
 
     void (async () => {
       const extracted = await requestExtract(spokenText);
-      if (extracted.failed) reportApiError("extract");
-
-      const extra = citationsFromTexts(extracted.queries);
-      const speech = capSpeechCitations(mergeCitations(fromTalk, extra));
-      setSpoken(speech);
-
-      await runVerify(mergeCitations(fromPack, speech), spokenText, abstract);
+      if (extracted.failed) reportError(apiErrorText[language].extract);
+      const speech = capSpeechCitations(
+        mergeCitations(fromTalk, citationsFromTexts(extracted.queries)),
+      );
+      await runVerify(speech, spokenText, seconds);
     })();
-  }, [live, pack, reportApiError, runVerify]);
-
-  useEffect(() => {
-    const stored = loadPack();
-    if (stored) {
-      const current = withId(stored);
-      setPack(current);
-      setManuscript(manuscriptFromPack(current));
-      setPhase("prepared");
-      setFormOpen(false);
-    }
-    setLibrary(listPacks());
-    setHydrated(true);
-  }, []);
+  }, [elapsed, language, reportError, runVerify]);
 
   useEffect(() => {
     if (phase !== "talking") return;
@@ -212,14 +129,18 @@ export function Booth() {
 
     let stopListen: (() => void) | undefined;
     const wait = window.setTimeout(() => {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
       stopListen = startBrowserListen({
-        lang: recognitionLang[language],
-        onFinal: (chunk) => {
-          setLive((cur) => mergeSpeech(cur, chunk));
+        lang: "en-US",
+        onText: (full) => {
+          const cleaned = mergeSpeech("", full);
+          liveRef.current = cleaned;
+          setLive(cleaned);
         },
-        onError: (reason) => {
+        onError: (reason: MicFailureReason) => {
+          setTranscript(liveRef.current);
           setPhase("stopped");
-          reportMicError(reason);
+          reportError(micErrorText[language][reason]);
         },
       });
     }, 1600);
@@ -228,16 +149,13 @@ export function Booth() {
       window.clearTimeout(wait);
       stopListen?.();
     };
-  }, [phase, language, reportMicError]);
+  }, [phase, language, reportError]);
 
   useEffect(() => {
     return bindVivaSession({
       start: () => {
-        if (phase !== "prepared" && phase !== "stopped") {
-          return {
-            ok: false,
-            message: "Prepare a manuscript or begin open talk first.",
-          };
+        if (phase === "talking") {
+          return { ok: false, message: "Practice is already running." };
         }
         resetSession();
         setPhase("talking");
@@ -253,111 +171,53 @@ export function Booth() {
       snapshot: () => ({
         phase,
         elapsedSeconds: elapsed,
-        canStart: phase === "prepared" || phase === "stopped",
+        canStart: phase !== "talking",
         canStop: phase === "talking",
       }),
     });
-  }, [phase, elapsed, live, language, finalizeStop, resetSession]);
+  }, [phase, elapsed, finalizeStop, resetSession]);
 
-  const lockPack = (mode: SessionMode) => {
-    const next = buildPack(manuscript, mode);
-    setPack(next);
-    savePack(next);
-    rememberPack(next);
-    setLibrary(listPacks());
-    setPhase("prepared");
-    setFormOpen(false);
-    resetSession();
-    if (mode === "prepared") {
-      void runVerify(next.citations, "", next.abstract);
-    }
-  };
-
-  const applyPack = (next: ExaminerPack) => {
-    const current = withId(next);
-    setPack(current);
-    setManuscript(manuscriptFromPack(current));
-    savePack(current);
-    setPhase("prepared");
-    setFormOpen(false);
-    resetSession();
-    if (current.mode === "prepared") {
-      void runVerify(current.citations, "", current.abstract);
-    }
-  };
-
-  const formLocked = phase === "talking";
-  const showForm = !hydrated || formOpen || !pack;
+  const shownTranscript = phase === "talking" ? live : transcript;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-10 md:px-10 md:py-14">
-      <header className="flex items-baseline justify-between gap-6">
-        <h1 className="font-display text-5xl text-ink md:text-6xl">Viva</h1>
-        <p className="max-w-[13rem] text-right text-xs leading-relaxed text-ink/45">
-          Read first. Then listen. Never invent a paper.
-        </p>
+    <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-8 md:px-12 md:py-10">
+      <header className="flex items-end justify-between gap-6 border-b border-rule pb-8">
+        <h1 className="font-display text-6xl leading-none text-ink md:text-7xl">Viva</h1>
+        <label className="mb-2 shrink-0">
+          <span className="sr-only">{language === "am" ? "ቋንቋ" : "Language"}</span>
+          <select
+            value={language}
+            onChange={(event) => chooseLanguage(event.target.value === "am" ? "am" : "en")}
+            className="rounded-full border border-ink/20 bg-transparent px-3 py-2 text-sm text-ink outline-none"
+          >
+            <option value="en">English</option>
+            <option value="am">አማርኛ</option>
+          </select>
+        </label>
       </header>
 
-      <div className="flex items-center justify-end gap-2 text-sm text-ink/60">
-        <label htmlFor="language" className="text-[11px] uppercase tracking-[0.14em] text-ink/45">
-          Language
-        </label>
-        <select
-          id="language"
-          value={language}
-          disabled={phase === "talking"}
-          onChange={(event) => setLanguage(event.target.value === "am" ? "am" : "en")}
-          className="rounded-full border border-rule bg-paper px-3 py-1.5 text-xs tracking-wide text-ink outline-none disabled:opacity-50"
-        >
-          <option value="en">{labels.en}</option>
-          <option value="am">{labels.am}</option>
-        </select>
-      </div>
-
-      {hydrated ? (
-        <PackLibrary packs={library} activeId={pack?.id ?? null} onSelect={applyPack} />
-      ) : null}
-
-      {showForm ? (
-        <ManuscriptForm
-          value={manuscript}
-          onChange={setManuscript}
-          disabled={formLocked}
-          onPrepare={() => lockPack("prepared")}
-          onOpenTalk={() => lockPack("open")}
+      <div className="flex flex-col gap-16 pt-14 md:pt-20">
+        <SessionBar
+          phase={phase}
+          elapsedSeconds={elapsed}
+          startLabel={text.start}
+          stopLabel={text.stop}
+          onStart={() => {
+            resetSession();
+            setPhase("talking");
+            hushVoxide();
+          }}
+          onStop={finalizeStop}
         />
-      ) : pack ? (
-        <ExaminerPackCard pack={pack} onEdit={() => setFormOpen(true)} />
-      ) : null}
 
-      <SessionBar
-        phase={phase}
-        elapsedSeconds={elapsed}
-        onStart={() => {
-          resetSession();
-          setPhase("talking");
-          hushVoxide();
-        }}
-        onStop={finalizeStop}
-      />
+        {errorText ? (
+          <p role="alert" className="rounded-xl border border-rust/30 bg-rust/5 px-5 py-3 text-[15px] leading-relaxed text-rust">
+            {errorText}
+          </p>
+        ) : null}
 
-      {errorText ? (
-        <p role="alert" className="-mt-6 border-t border-rule pt-4 text-sm leading-relaxed text-rust">
-          {errorText}
-        </p>
-      ) : null}
-
-      <DebriefPanel
-        transcript={phase === "talking" ? live : transcript}
-        citations={
-          checked ??
-          mergeCitations(
-            pack && pack.mode === "prepared" ? pack.citations : emptyCitations,
-            spoken,
-          )
-        }
-        debrief={debrief}
-      />
+        <DebriefPanel transcript={shownTranscript} citations={checked ?? []} debrief={debrief} language={language} />
+      </div>
     </div>
   );
 }

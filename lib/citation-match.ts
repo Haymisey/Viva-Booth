@@ -30,26 +30,90 @@ export function significantTokens(text: string) {
     .filter((w) => w.length > 3 && !STOP.has(w) && !/^\d{4}$/.test(w));
 }
 
-/** True only when the Scholarxiv title is actually about this claim. */
+const GENERIC = new Set([
+  ...STOP,
+  "energy",
+  "system",
+  "systems",
+  "data",
+  "model",
+  "models",
+  "learning",
+  "network",
+  "networks",
+  "based",
+  "using",
+  "approach",
+  "study",
+  "analysis",
+  "performance",
+  "smart",
+  "real",
+  "time",
+  "method",
+  "methods",
+  "novel",
+  "towards",
+  "via",
+  "modern",
+  "using",
+]);
+
+function normalized(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function distinctive(text: string) {
+  return normalized(text)
+    .split(" ")
+    .filter((w) => w.length > 2 && !GENERIC.has(w) && !/^\d+$/.test(w));
+}
+
+/** True only when the two titles are the same work, not a nearby topic. */
 export function titleMatchesClaim(query: string, title: string) {
-  const q = query.trim().toLowerCase();
-  const t = title.trim().toLowerCase();
+  const q = normalized(query);
+  const t = normalized(title);
   if (!q || !t) return false;
+  if (q === t) return true;
 
-  const qYears = yearsIn(q);
-  if (qYears.length > 0 && !qYears.some((y) => t.includes(y))) {
-    return false;
-  }
+  const qw = q.split(" ").filter((w) => w.length > 1);
+  const tw = t.split(" ").filter((w) => w.length > 1);
+  if (qw.length >= 4 && t.includes(q)) return true;
+  if (tw.length >= 4 && q.includes(t)) return true;
 
-  if (t.includes(q)) return true;
+  const qt = distinctive(query);
+  const tt = distinctive(title);
+  if (qt.length < 2 || tt.length < 2) return false;
+  const titleWords = new Set(tt);
+  const shared = qt.filter((w) => titleWords.has(w));
+  const union = new Set([...qt, ...tt]).size;
+  return shared.length / union >= 0.72 && shared.length >= 2;
+}
 
-  const qt = significantTokens(query);
-  const tt = new Set(significantTokens(title));
-  if (qt.length === 0) return false;
-  const hit = qt.filter((w) => tt.has(w)).length;
-  // Two generic words ("architectures" + "intelligence") is not a paper match.
-  if (qt.length <= 2) return hit === qt.length;
-  return hit >= Math.ceil(qt.length * 0.75);
+const WEAK = new Set([
+  "international",
+  "national",
+  "global",
+  "world",
+  "conference",
+  "competition",
+  "proceedings",
+  "annual",
+  "report",
+  "workshop",
+  "symposium",
+]);
+
+/** A nearby title worth showing. An unrelated first hit is not. */
+export function isUsefulClosest(query: string, title: string) {
+  if (!title.trim() || titleMatchesClaim(query, title)) return false;
+  const qt = distinctive(query).filter((w) => w.length > 4 && !WEAK.has(w));
+  const tt = new Set(distinctive(title).filter((w) => w.length > 4 && !WEAK.has(w)));
+  return qt.filter((w) => tt.has(w)).length >= 2;
 }
 
 /** True when the claim's content words actually appear in the heard talk. */

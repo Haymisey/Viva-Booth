@@ -4,6 +4,8 @@ type Row = {
   query: string;
   status: CitationStatus;
   title?: string;
+  abstract?: string;
+  closest?: string;
 };
 
 export type VerifyResult = {
@@ -34,7 +36,9 @@ export async function verifyCitations(list: Citation[]): Promise<VerifyResult> {
         return {
           ...c,
           status: row.status,
-          hitTitle: row.title,
+          hitTitle: row.status === "not_found" ? undefined : row.title,
+          hitAbstract: row.abstract,
+          closestTitle: row.closest,
         };
       }),
       failed: false,

@@ -6,11 +6,13 @@ import type { SessionPhase } from "@/lib/types";
 type Props = {
   phase: SessionPhase;
   elapsedSeconds: number;
+  startLabel: string;
+  stopLabel: string;
   onStart: () => void;
   onStop: () => void;
 };
 
-function formatTime(total: number) {
+export function formatTime(total: number) {
   const m = Math.floor(total / 60)
     .toString()
     .padStart(2, "0");
@@ -18,31 +20,23 @@ function formatTime(total: number) {
   return `${m}:${s}`;
 }
 
-const captions: Record<SessionPhase, string> = {
-  idle: "Prepare or open talk, then start.",
-  prepared: "The bar is the mic. Start is the clock.",
-  talking: "Speak your defence. Ignore the assistant.",
-  stopped: "Stopped. Start again for a second take.",
-};
-
-export function SessionBar({ phase, elapsedSeconds, onStart, onStop }: Props) {
-  const canStart = phase === "prepared" || phase === "stopped";
+export function SessionBar({ phase, elapsedSeconds, startLabel, stopLabel, onStart, onStop }: Props) {
+  const canStart = phase !== "talking";
   const canStop = phase === "talking";
 
   return (
-    <div className="flex flex-col items-center border-t border-rule pt-12 text-center">
-      <p className="font-display text-7xl tabular-nums tracking-tight text-ink md:text-8xl">
+    <div className="flex flex-col items-center text-center">
+      <p className="font-display text-8xl leading-none tabular-nums text-ink md:text-9xl">
         {formatTime(elapsedSeconds)}
       </p>
-      <div className="mt-6 flex gap-3">
-        <Button type="button" onClick={onStart} disabled={!canStart}>
-          Start
+      <div className="mt-8 flex gap-3">
+        <Button type="button" onClick={onStart} disabled={!canStart} className="min-w-32">
+          {startLabel}
         </Button>
-        <Button type="button" tone="line" onClick={onStop} disabled={!canStop}>
-          Stop
+        <Button type="button" tone="line" onClick={onStop} disabled={!canStop} className="min-w-32">
+          {stopLabel}
         </Button>
       </div>
-      <p className="mt-4 max-w-sm text-sm text-ink/45">{captions[phase]}</p>
     </div>
   );
 }

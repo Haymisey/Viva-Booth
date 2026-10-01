@@ -1,32 +1,44 @@
 export type PaperHit = {
   title?: string;
+  abstract?: string;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }
 
-function titleOf(row: unknown): string | undefined {
-  const r = asRecord(row);
-  if (!r) return undefined;
-  const inner = asRecord(r.paper) ?? r;
-  for (const key of ["title", "ti", "name"]) {
-    const v = inner[key];
+function textField(row: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const v = row[key];
     if (typeof v === "string" && v.trim()) return v.trim();
   }
   return undefined;
 }
 
+function titleOf(row: unknown): string | undefined {
+  const r = asRecord(row);
+  if (!r) return undefined;
+  const inner = asRecord(r.paper) ?? r;
+  return textField(inner, ["title", "ti", "name"]);
+}
+
+function abstractOf(row: unknown): string | undefined {
+  const r = asRecord(row);
+  if (!r) return undefined;
+  const inner = asRecord(r.paper) ?? r;
+  return textField(inner, ["abstract", "summary", "abs", "description"]);
+}
+
 function collectPapers(payload: unknown): PaperHit[] {
   if (Array.isArray(payload)) {
-    return payload.map((row) => ({ title: titleOf(row) }));
+    return payload.map((row) => ({ title: titleOf(row), abstract: abstractOf(row) }));
   }
   const root = asRecord(payload);
   if (!root) return [];
   const bags = [root.data, root.papers, root.results, root.items, root.hits];
   for (const bag of bags) {
     if (Array.isArray(bag)) {
-      return bag.map((row) => ({ title: titleOf(row) }));
+      return bag.map((row) => ({ title: titleOf(row), abstract: abstractOf(row) }));
     }
     const nested = asRecord(bag);
     if (nested) {

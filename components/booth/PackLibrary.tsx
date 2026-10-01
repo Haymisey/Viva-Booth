@@ -11,7 +11,8 @@ export function PackLibrary({ packs, activeId, onSelect }: Props) {
   if (packs.length === 0) return null;
 
   return (
-    <nav className="flex flex-wrap gap-2">
+    <nav className="flex flex-wrap items-center gap-2">
+      <span className="mr-1 text-xs font-medium uppercase tracking-[0.12em] text-ink/55">Saved</span>
       {packs.map((pack) => {
         const on = pack.id === activeId;
         return (
@@ -19,10 +20,10 @@ export function PackLibrary({ packs, activeId, onSelect }: Props) {
             key={pack.id}
             type="button"
             onClick={() => onSelect(pack)}
-            className={`rounded-full px-3 py-1 text-xs tracking-wide transition ${
+            className={`rounded-full px-4 py-1.5 text-sm transition ${
               on
                 ? "bg-ink text-paper"
-                : "border border-rule text-ink/55 hover:border-ink/30 hover:text-ink"
+                : "border border-ink/20 text-ink/75 hover:border-ink/50 hover:text-ink"
             }`}
           >
             {packLabel(pack)}

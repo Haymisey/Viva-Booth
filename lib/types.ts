@@ -4,7 +4,7 @@ export type SessionMode = "open" | "prepared";
 
 export type AppLanguage = "en" | "am";
 
-export type CitationStatus = "pending" | "in_corpus" | "not_found" | "unverified";
+export type CitationStatus = "pending" | "in_corpus" | "elsewhere" | "not_found" | "unverified";
 
 export type Manuscript = {
   title: string;
@@ -19,6 +19,8 @@ export type Citation = {
   status: CitationStatus;
   source: "manuscript" | "speech";
   hitTitle?: string;
+  hitAbstract?: string;
+  closestTitle?: string;
 };
 
 export type ExaminerPack = {
