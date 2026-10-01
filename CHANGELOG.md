@@ -4,6 +4,14 @@ Team log of what shipped, broke, or got cut. Mirror important entries to STARK C
 
 ## 2026-10-01
 
+- Examiner questions ask about a claim. They no longer quote the microphone back. A closest title is shown only when it shares real words with what was said. A student describing "what an examiner would ask" is not marked as an answer.
+
+- A citation is in corpus only when the Scholarxiv title is the same work. A different title is shown as the closest match and stays not found. OpenAlex can mark a real match as found elsewhere.
+- An open talk is named from the transcript after the first stop. Recent takes reopen that exam. End session is what clears it.
+
+- Practice leads with the timer. Home, Manuscripts, Takes, and Settings sit in a sidebar. A saved name is the only greeting.
+- Take 1 asks four questions and gives an opening line. Later takes mark each answer answered, partial, or missed, then ask two more.
+
 - UI: Newsreader serif for headings and timer, stronger text contrast, coloured citation badges (in corpus green, not found rust). Booth uses three ruled columns; Keep / Fix / Say shown as separate lines.
 - Session card shows the current pack, live counts, and the Say line. Recent takes are saved in this browser (`viva.sessions`, last 12): date, length, take, citation counts, Say line, examiner questions.
 - FEAT-007: two examiner questions from Scholarxiv in-corpus titles (or the packed abstract). Spoken in-browser. Start again is a second take against the same questions.

@@ -1,11 +1,20 @@
-import type { Citation, SessionMode } from "./types";
+import type { Citation, CitationStatus, SessionMode } from "./types";
+import type { Verdict } from "./gemini";
+
+export type SavedCitation = {
+  text: string;
+  status: CitationStatus;
+  source: Citation["source"];
+  hitTitle?: string;
+  closestTitle?: string;
+};
 
 export type SessionRecord = {
   id: string;
   packId: string;
   title: string;
   mode: SessionMode;
-  take: 1 | 2;
+  take: number;
   at: string;
   seconds: number;
   transcript: string;
@@ -13,7 +22,11 @@ export type SessionRecord = {
   notFound: number;
   unverified: number;
   say: string;
-  questions: [string, string] | null;
+  questions: string[] | null;
+  questionNote?: string | null;
+  debrief?: string;
+  verdicts?: Verdict[];
+  citations?: SavedCitation[];
 };
 
 const KEY = "viva.sessions";
@@ -59,5 +72,6 @@ export function countStatuses(citations: Citation[]) {
     inCorpus: citations.filter((c) => c.status === "in_corpus").length,
     notFound: citations.filter((c) => c.status === "not_found").length,
     unverified: citations.filter((c) => c.status === "unverified").length,
+    elsewhere: citations.filter((c) => c.status === "elsewhere").length,
   };
 }

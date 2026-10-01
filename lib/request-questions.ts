@@ -1,21 +1,26 @@
 import type { Citation } from "./types";
 
-export type QuestionPair = [string, string];
-
 export async function requestQuestions(input: {
   language: "en" | "am";
   abstract: string;
+  transcript: string;
   citations: Citation[];
-}): Promise<QuestionPair | null> {
+  count?: number;
+}): Promise<{ note: string | null; questions: string[] } | null> {
   const hits: { title: string; abstract?: string }[] = [];
   const seen = new Set<string>();
-  for (const c of input.citations) {
-    if (c.status !== "in_corpus" || !c.hitTitle) continue;
-    const k = c.hitTitle.toLowerCase();
-    if (seen.has(k)) continue;
-    seen.add(k);
-    hits.push({ title: c.hitTitle, abstract: c.hitAbstract });
-  }
+  const take = (status: "in_corpus" | "elsewhere") => {
+    for (const c of input.citations) {
+      if (c.status !== status || !c.hitTitle) continue;
+      const k = c.hitTitle.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      hits.push({ title: c.hitTitle, abstract: c.hitAbstract });
+    }
+  };
+  take("in_corpus");
+  const corpusCount = hits.length;
+  if (corpusCount === 0) take("elsewhere");
   try {
     const res = await fetch("/api/questions", {
       method: "POST",
@@ -23,16 +28,22 @@ export async function requestQuestions(input: {
       body: JSON.stringify({
         language: input.language,
         abstract: input.abstract,
+        transcript: input.transcript,
+        count: input.count === 2 ? 2 : 4,
+        matchedElsewhere: corpusCount === 0 && hits.length > 0,
         hits,
       }),
     });
     if (!res.ok) return null;
-    const data = (await res.json()) as { questions?: unknown };
-    if (!Array.isArray(data.questions) || data.questions.length < 2) return null;
-    const a = typeof data.questions[0] === "string" ? data.questions[0].trim() : "";
-    const b = typeof data.questions[1] === "string" ? data.questions[1].trim() : "";
-    if (!a || !b) return null;
-    return [a, b];
+    const data = (await res.json()) as { note?: unknown; questions?: unknown };
+    if (!Array.isArray(data.questions)) return null;
+    const questions = data.questions
+      .filter((q): q is string => typeof q === "string")
+      .map((q) => q.trim())
+      .filter(Boolean);
+    if (questions.length === 0) return null;
+    const note = typeof data.note === "string" && data.note.trim() ? data.note.trim() : null;
+    return { note, questions };
   } catch {
     return null;
   }

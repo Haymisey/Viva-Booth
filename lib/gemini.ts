@@ -1,3 +1,5 @@
+import { significantTokens } from "./citation-match";
+
 type GeminiJson = {
   candidates?: { content?: { parts?: { text?: string }[] } }[];
 };
@@ -188,76 +190,128 @@ export type QuestionHit = {
 export type QuestionInput = {
   language: "en" | "am";
   abstract: string;
+  transcript: string;
   hits: QuestionHit[];
+  count?: number;
+  matchedElsewhere?: boolean;
 };
 
-export type QuestionPair = [string, string];
+export type ExaminerTurn = {
+  note: string | null;
+  questions: string[];
+};
 
-export function fallbackExaminerQuestions(input: QuestionInput): QuestionPair {
-  const am = input.language === "am";
-  const t0 = input.hits[0]?.title;
-  const t1 = input.hits[1]?.title ?? t0;
-  if (t0) {
-    if (am) {
-      return [
-        `“${t0}” ጠቅሰሃል። ያ ሥራ በትክክል ምን ይከራከራል?`,
-        t1 && t1 !== t0
-          ? `“${t1}” የተናገርከውን ዓረፍተ ነገር እንዴት ይደግፋል?`
-          : "ያ ምንጭ የተናገርከውን ዓረፍተ ነገር እንዴት ይደግፋል?",
-      ];
-    }
-    return [
-      `You cited ${t0}. What does that work actually claim?`,
-      t1 && t1 !== t0
-        ? `How does ${t1} support the sentence you just said?`
-        : "How does that source support the sentence you just said?",
-    ];
-  }
-  const snippet = input.abstract.replace(/\s+/g, " ").trim().slice(0, 180);
-  if (snippet) {
-    if (am) {
-      return [
-        "ከዝግጅት አብስትራክትህ፦ የምርምር ጥያቄህ ምንድን ነው?",
-        "ፈታኝ ምን ሊጠራጠር ይችላል?",
-      ];
-    }
-    const clipped = input.abstract.trim().length > 180 ? `${snippet}…` : snippet;
-    return [
-      `Your abstract says: “${clipped}”. What is the one claim?`,
-      "What would an examiner doubt in that abstract?",
-    ];
-  }
-  if (am) {
-    return ["የዚህ ንግግር አንዱ ክስ ምንድን ነው?", "ፈታኝ ምን ሊጠይቅ ይችላል?"];
-  }
-  return [
-    "What is the one claim of this talk?",
-    "What would an examiner doubt?",
-  ];
+export type AnswerMark = "answered" | "partial" | "missed";
+
+export type Verdict = {
+  question: string;
+  mark: AnswerMark;
+  say: string;
+};
+
+function speechNote(language: "en" | "am") {
+  return language === "am"
+    ? "ያንን ወረቀት በScholarxiv አላገኘሁትም። ከተናገርከው ነገር እጠይቅሃለሁ።"
+    : "I did not find that paper in Scholarxiv. I will ask you from what you said.";
 }
 
-function groundedQuestion(text: string, hits: QuestionHit[]) {
-  if (hits.length === 0) return true;
+function elsewhereNote(language: "en" | "am") {
+  return language === "am"
+    ? "ያንን ወረቀት በScholarxiv አላገኘሁትም። ተመሳሳይ ርዕስ ሌላ ቦታ አለ፣ ስለዚያ እጠይቃለሁ።"
+    : "I did not find that paper in Scholarxiv. A matching title is elsewhere, so I will ask about that.";
+}
+
+function usableQuestion(text: string) {
+  const q = text.trim();
+  if (q.length < 12 || q.length > 180) return false;
+  if (/^you said\b/i.test(q)) return false;
+  if (/\b(first|second|third|fourth) question\b/i.test(q)) return false;
+  if (/\ban examiner would\b/i.test(q)) return false;
+  return true;
+}
+
+function speechQuestions(input: QuestionInput, count: number): string[] {
+  const am = input.language === "am";
+  const pool = am
+    ? [
+        "ያ ክስ በአንድ አረፍተ ነገር ምንድን ነው?",
+        "ያ ቁጥር ወይም ያ ክፍል ትክክል ካልሆነ ምን ይሰበራል?",
+        "ይህ ለማን ነው፣ ለማን አይደለም?",
+        "ይህን እውነት ለማሳየት ምን ትለካለህ?",
+      ]
+    : [
+        "What is the one claim, in a single sentence?",
+        "What breaks if that number or that definition is wrong?",
+        "Who does this apply to, and who does it leave out?",
+        "What would you measure to show this is true?",
+      ];
+  return pool.slice(0, count);
+}
+
+export function fallbackExaminerQuestions(input: QuestionInput): ExaminerTurn {
+  const count = input.count ?? 4;
+  const am = input.language === "am";
+  const t0 = input.hits[0]?.title;
+  const t1 = input.hits[1]?.title;
+  if (t0) {
+    const pool = am
+      ? [
+          `“${t0}” ጠቅሰሃል። ያ ሥራ በትክክል ምን ይከራከራል?`,
+          t1 ? `“${t1}” የተናገርከውን ዓረፍተ ነገር እንዴት ይደግፋል?` : "ያ ምንጭ የተናገርከውን ዓረፍተ ነገር እንዴት ይደግፋል?",
+          `“${t0}” ካልተሳሳተ ክስህ ምን ይሆናል?`,
+          "ከዚህ ምንጭ ውጭ የምትናገረው ነገር የት ይቆማል?",
+        ]
+      : [
+          `You cited ${t0}. What does that work actually claim?`,
+          t1
+            ? `How does ${t1} support the sentence you just said?`
+            : "How does that source support the sentence you just said?",
+          `If ${t0} is wrong, what happens to your argument?`,
+          `Where does your claim go beyond ${t0}?`,
+        ];
+    return {
+      note: input.matchedElsewhere ? elsewhereNote(input.language) : null,
+      questions: pool.slice(0, count),
+    };
+  }
+  return { note: speechNote(input.language), questions: speechQuestions(input, count) };
+}
+
+function aboutSpeech(text: string, transcript: string) {
+  const spoken = new Set(significantTokens(transcript).filter((w) => w.length > 4));
+  if (spoken.size === 0) return true;
+  return significantTokens(text).some((w) => spoken.has(w));
+}
+
+function groundedQuestion(text: string, hits: QuestionHit[], transcript: string) {
+  if (hits.length === 0) return aboutSpeech(text, transcript);
   const hay = text.toLowerCase();
   return hits.some((h) => hay.includes(h.title.toLowerCase()));
 }
 
-export async function generateExaminerQuestions(input: QuestionInput): Promise<QuestionPair> {
+export async function generateExaminerQuestions(input: QuestionInput): Promise<ExaminerTurn> {
   const fallback = fallbackExaminerQuestions(input);
+  const count = input.count ?? 4;
   if (!geminiKey()) return fallback;
 
   const titles = input.hits.map((h) => h.title);
-  const prompt = `You are a thesis examiner. Write exactly TWO short spoken questions.
+  const fromSpeech = titles.length === 0;
+  const prompt = `You are a thesis examiner. Write exactly ${count} short spoken questions.
 
 Rules:
 - Never invent a paper, author, or year.
 - You may only name these confirmed titles: ${titles.join("; ") || "(none — do not name a paper)"}.
 - If there are confirmed titles, each question must name at least one of them.
-- If there are none, ask only from the packed abstract or the talk as a whole. Do not name a paper.
+- If there are none, ask about a claim in the talk: a number, a definition, a cause, or what fails if it is wrong.
+- Do not start with "You said". Do not quote a sentence back. Do not mention "the first question".
+- Use words that appear in the talk, such as the subject and the figure, inside a real question.
 - Respond in ${input.language === "am" ? "Amharic (Ge'ez script)" : "English"}.
 
 Packed abstract:
 ${input.abstract || "(none)"}
+
+Talk:
+${input.transcript || "(none)"}
 
 Confirmed papers:
 ${input.hits.map((h) => `- ${h.title}${h.abstract ? `\n  abstract: ${h.abstract.slice(0, 400)}` : ""}`).join("\n") || "(none)"}
@@ -265,19 +319,134 @@ ${input.hits.map((h) => `- ${h.title}${h.abstract ? `\n  abstract: ${h.abstract.
 JSON only:
 {"questions":["…","…"]}`;
 
-  const raw = await generateJson(prompt, 0.3);
+  const raw = await generateJson(prompt, fromSpeech ? 0.2 : 0.3);
   if (!raw) return fallback;
   try {
     const parsed = JSON.parse(stripFence(raw)) as { questions?: unknown };
-    if (!Array.isArray(parsed.questions) || parsed.questions.length < 2) return fallback;
-    const a = typeof parsed.questions[0] === "string" ? parsed.questions[0].trim() : "";
-    const b = typeof parsed.questions[1] === "string" ? parsed.questions[1].trim() : "";
-    if (!a || !b) return fallback;
-    if (!groundedQuestion(a, input.hits) || !groundedQuestion(b, input.hits)) {
-      return fallback;
+    if (!Array.isArray(parsed.questions)) return fallback;
+    const cleaned = parsed.questions
+      .filter((q): q is string => typeof q === "string")
+      .map((q) => q.trim())
+      .filter((q) => usableQuestion(q) && groundedQuestion(q, input.hits, input.transcript));
+    const questions = [...cleaned];
+    for (const q of fallback.questions) {
+      if (questions.length >= count) break;
+      if (!questions.includes(q)) questions.push(q);
     }
-    return [a, b];
+    if (questions.length === 0) return fallback;
+    const note = input.matchedElsewhere
+      ? elsewhereNote(input.language)
+      : fromSpeech
+        ? speechNote(input.language)
+        : null;
+    return { note, questions: questions.slice(0, count) };
   } catch {
     return fallback;
+  }
+}
+
+function asMark(value: unknown): AnswerMark {
+  return value === "answered" || value === "missed" ? value : "partial";
+}
+
+export async function nameTalk(transcript: string): Promise<string> {
+  const clean = transcript.replace(/\s+/g, " ").trim();
+  const fallback = clean.split(" ").slice(0, 6).join(" ") || "Open talk";
+  if (!geminiKey() || !clean) return fallback;
+  const prompt = `Name this spoken talk in 3 to 6 words. It is a session name, not a paper title. Do not invent an author, year, or citation. No quotes.
+
+Talk:
+${clean.slice(0, 1200)}
+
+JSON only:
+{"title":"…"}`;
+  const raw = await generateJson(prompt, 0.2);
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(stripFence(raw)) as { title?: unknown };
+    const title = typeof parsed.title === "string" ? parsed.title.replace(/["']/g, "").trim() : "";
+    const words = title.split(/\s+/).filter(Boolean);
+    if (words.length >= 2 && words.length <= 8) return words.join(" ");
+  } catch {
+    /* fall through */
+  }
+  return fallback;
+}
+
+export async function judgeAnswers(input: {
+  language: "en" | "am";
+  transcript: string;
+  questions: string[];
+  followUps: boolean;
+}): Promise<{ keep: string; verdicts: Verdict[]; followUps: string[] }> {
+  const spoken = input.transcript.trim();
+  const fallbackVerdicts: Verdict[] = input.questions.map((question) => ({
+    question,
+    mark: spoken.length > 80 ? "partial" : "missed",
+    say: input.language === "am" ? "ያንን ጥያቄ በአንድ አረፍተ ነገር መልስ።" : "Answer that question in one sentence.",
+  }));
+  const fallbackFollow = input.followUps
+    ? speechQuestions({ ...input, abstract: "", hits: [], count: 2 }, 2)
+    : [];
+  const fallbackKeep =
+    input.language === "am" ? "መልስህን በግልጽ ተናግረሃል።" : "You answered in your own words.";
+  if (!geminiKey() || input.questions.length === 0) {
+    return { keep: fallbackKeep, verdicts: fallbackVerdicts, followUps: fallbackFollow };
+  }
+
+  const prompt = `You are the examiner who just asked these questions. Judge ONLY the talk. Never invent a paper, author, or year.
+
+For each question, in the same order:
+- answered: they state their own position on that question.
+- partial: they describe the topic, or they describe what an examiner might ask, and never state their own answer.
+- missed: they do not address it.
+Narrating "an examiner would challenge" is not an answer.
+say: ONE sentence in the student's voice. Do not start with "An examiner would". Do not summarise their whole turn.
+
+${input.followUps ? `followUps: TWO new questions that push on a number, a definition, or a limit in the talk. Do not start with "You said". Do not quote them. Do not say "first question". Do not repeat the questions below. Do not name a paper.` : "followUps: empty array."}
+keep: one short sentence on what they did well.
+
+Respond in ${input.language === "am" ? "Amharic (Ge'ez script)" : "English"}.
+
+Questions:
+${input.questions.map((q, i) => `${i + 1}. ${q}`).join("\n")}
+
+Talk:
+${spoken || "(none)"}
+
+JSON only:
+{"keep":"…","verdicts":[{"mark":"answered","say":"…"}],"followUps":["…","…"]}`;
+
+  const raw = await generateJson(prompt, 0.2);
+  if (!raw) return { keep: fallbackKeep, verdicts: fallbackVerdicts, followUps: fallbackFollow };
+  try {
+    const parsed = JSON.parse(stripFence(raw)) as {
+      keep?: unknown;
+      verdicts?: unknown;
+      followUps?: unknown;
+    };
+    const rows = Array.isArray(parsed.verdicts) ? parsed.verdicts : null;
+    if (!rows) {
+      return { keep: fallbackKeep, verdicts: fallbackVerdicts, followUps: fallbackFollow };
+    }
+    const verdicts = input.questions.map((question, i) => {
+      const row = rows[i] as { mark?: unknown; say?: unknown } | undefined;
+      const say = typeof row?.say === "string" && row.say.trim() ? row.say.trim() : fallbackVerdicts[i].say;
+      return { question, mark: asMark(row?.mark), say };
+    });
+    const followUps = input.followUps && Array.isArray(parsed.followUps)
+      ? parsed.followUps
+          .filter((q): q is string => typeof q === "string")
+          .map((q) => q.trim())
+          .filter((q) => usableQuestion(q))
+          .slice(0, 2)
+      : [];
+    return {
+      keep: typeof parsed.keep === "string" && parsed.keep.trim() ? parsed.keep.trim() : fallbackKeep,
+      verdicts,
+      followUps: followUps.length === 2 ? followUps : fallbackFollow,
+    };
+  } catch {
+    return { keep: fallbackKeep, verdicts: fallbackVerdicts, followUps: fallbackFollow };
   }
 }

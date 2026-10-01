@@ -1,11 +1,19 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/Badge";
+import type { Verdict } from "@/lib/gemini";
 import type { Citation } from "@/lib/types";
 
 type Props = {
   transcript: string;
   citations: Citation[];
   debrief: string;
+  verdicts?: Verdict[];
+};
+
+const markLabel: Record<Verdict["mark"], string> = {
+  answered: "Answered",
+  partial: "Partial",
+  missed: "Missed",
 };
 
 type DebriefLine = { kind: string; text: string };
@@ -35,7 +43,7 @@ function Empty({ children }: { children: ReactNode }) {
   return <p className="text-ink/50">{children}</p>;
 }
 
-export function DebriefPanel({ transcript, citations, debrief }: Props) {
+export function DebriefPanel({ transcript, citations, debrief, verdicts = [] }: Props) {
   const lines = parseDebrief(debrief);
 
   return (
@@ -66,6 +74,9 @@ export function DebriefPanel({ transcript, citations, debrief }: Props) {
                   {c.hitTitle ? (
                     <span className="mt-1 block text-sm text-ink/60">{c.hitTitle}</span>
                   ) : null}
+                  {c.status === "not_found" && c.closestTitle ? (
+                    <span className="mt-1 block text-sm text-ink/50">Closest: {c.closestTitle}</span>
+                  ) : null}
                 </span>
                 <Badge status={c.status} />
               </li>
@@ -81,7 +92,19 @@ export function DebriefPanel({ transcript, citations, debrief }: Props) {
           </>
         }
       >
-        {lines.length === 0 ? (
+        {verdicts.length > 0 ? (
+          <div className="flex flex-col gap-5">
+            {verdicts.map((v, i) => (
+              <div key={i}>
+                <p className="text-xs font-medium uppercase tracking-[0.12em] text-ink/55">
+                  {i + 1} · {markLabel[v.mark] ?? "Partial"}
+                </p>
+                <p className="mt-1 text-sm text-ink/65">{v.question}</p>
+                <p className="font-display mt-2 text-lg italic text-ink">“{v.say}”</p>
+              </div>
+            ))}
+          </div>
+        ) : lines.length === 0 ? (
           <Empty>Keep one thing. Fix two. One line to say instead.</Empty>
         ) : (
           <div className="flex flex-col gap-4">

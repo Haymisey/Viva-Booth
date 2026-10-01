@@ -4,6 +4,7 @@ import type { SessionRecord } from "@/lib/sessions";
 type Props = {
   sessions: SessionRecord[];
   onClear: () => void;
+  onOpen?: (session: SessionRecord) => void;
 };
 
 function day(iso: string) {
@@ -14,8 +15,15 @@ function day(iso: string) {
   }
 }
 
-export function RecentTakes({ sessions, onClear }: Props) {
-  if (sessions.length === 0) return null;
+export function RecentTakes({ sessions, onClear, onOpen }: Props) {
+  if (sessions.length === 0) {
+    return (
+      <section>
+        <h2 className="font-display text-4xl text-ink">Takes</h2>
+        <p className="mt-3 text-[15px] text-ink/60">Stop a session and it lands here.</p>
+      </section>
+    );
+  }
 
   return (
     <section>
@@ -52,15 +60,29 @@ export function RecentTakes({ sessions, onClear }: Props) {
                     </span>
                   ) : null}
                 </span>
+                {onOpen ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onOpen(s);
+                    }}
+                    className="text-sm text-ink/70 underline-offset-4 hover:text-ink hover:underline"
+                  >
+                    Continue
+                  </button>
+                ) : null}
               </summary>
               <div className="mt-4 flex flex-col gap-3 border-t border-rule pt-4 text-[15px] leading-relaxed text-ink/80">
                 {s.say ? (
                   <p className="font-display text-lg italic text-ink">“{s.say}”</p>
                 ) : null}
-                {s.questions ? (
+                {s.questionNote ? <p>{s.questionNote}</p> : null}
+                {s.questions && s.questions.length > 0 ? (
                   <ol className="list-decimal pl-5">
-                    <li>{s.questions[0]}</li>
-                    <li>{s.questions[1]}</li>
+                    {s.questions.map((q) => (
+                      <li key={q}>{q}</li>
+                    ))}
                   </ol>
                 ) : null}
                 {s.transcript ? (

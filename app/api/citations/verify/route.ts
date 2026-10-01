@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { titleMatchesClaim } from "@/lib/citation-match";
+import { isUsefulClosest, titleMatchesClaim } from "@/lib/citation-match";
+import { searchOpenAlex } from "@/lib/openalex";
 import { searchScholarxiv } from "@/lib/scholarxiv";
+import type { PaperHit } from "@/lib/scholarxiv";
 import type { CitationStatus } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -10,6 +12,7 @@ type Row = {
   status: CitationStatus;
   title?: string;
   abstract?: string;
+  closest?: string;
 };
 
 export async function POST(request: Request) {
@@ -27,26 +30,36 @@ export async function POST(request: Request) {
   const results: Row[] = [];
 
   for (const query of sliced) {
+    const same = (hits: PaperHit[]) => hits.find((h) => h.title && titleMatchesClaim(query, h.title));
     const hits = await searchScholarxiv(query);
     if (hits === null) {
       results.push({ query, status: "unverified" });
       continue;
     }
-    if (hits.length === 0) {
-      results.push({ query, status: "not_found" });
+    const corpus = same(hits);
+    if (corpus?.title) {
+      results.push({
+        query,
+        status: "in_corpus",
+        title: corpus.title,
+        abstract: corpus.abstract,
+      });
       continue;
     }
-    const match = hits.find((h) => h.title && titleMatchesClaim(query, h.title));
-    if (!match?.title) {
-      results.push({ query, status: "not_found" });
+    const outside = await searchOpenAlex(query);
+    const other = outside ? same(outside) : undefined;
+    if (other?.title) {
+      results.push({
+        query,
+        status: "elsewhere",
+        title: other.title,
+        abstract: other.abstract,
+      });
       continue;
     }
-    results.push({
-      query,
-      status: "in_corpus",
-      title: match.title,
-      abstract: match.abstract,
-    });
+    const pool = [...hits, ...(outside ?? [])];
+    const closest = pool.find((h) => h.title && isUsefulClosest(query, h.title))?.title;
+    results.push({ query, status: "not_found", closest });
   }
 
   return NextResponse.json({ results });

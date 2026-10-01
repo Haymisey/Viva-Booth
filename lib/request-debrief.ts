@@ -1,8 +1,11 @@
+import type { Verdict } from "./gemini";
 import type { Citation } from "./types";
 
 export type DebriefResult = {
   text: string;
   failed: boolean;
+  verdicts: Verdict[];
+  followUps: string[];
 };
 
 export async function requestDebrief(input: {
@@ -10,6 +13,8 @@ export async function requestDebrief(input: {
   abstract: string;
   citations: Citation[];
   language: "en" | "am";
+  questions?: string[];
+  followUps?: boolean;
 }) {
   try {
     const res = await fetch("/api/debrief", {
@@ -24,12 +29,19 @@ export async function requestDebrief(input: {
           hitTitle: c.hitTitle,
         })),
         language: input.language,
+        questions: input.questions ?? [],
+        followUps: input.followUps === true,
       }),
     });
-    if (!res.ok) return { text: "", failed: true } satisfies DebriefResult;
-    const data = (await res.json()) as { text?: string };
-    return { text: data.text ?? "", failed: false } satisfies DebriefResult;
+    if (!res.ok) return { text: "", failed: true, verdicts: [], followUps: [] } satisfies DebriefResult;
+    const data = (await res.json()) as { text?: string; verdicts?: Verdict[]; followUps?: string[] };
+    return {
+      text: data.text ?? "",
+      failed: false,
+      verdicts: Array.isArray(data.verdicts) ? data.verdicts : [],
+      followUps: Array.isArray(data.followUps) ? data.followUps : [],
+    } satisfies DebriefResult;
   } catch {
-    return { text: "", failed: true } satisfies DebriefResult;
+    return { text: "", failed: true, verdicts: [], followUps: [] } satisfies DebriefResult;
   }
 }

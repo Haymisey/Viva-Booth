@@ -6,7 +6,7 @@ import type { SessionPhase } from "@/lib/types";
 type Props = {
   phase: SessionPhase;
   elapsedSeconds: number;
-  take: 1 | 2;
+  take: number;
   onStart: () => void;
   onStop: () => void;
 };
