@@ -4,18 +4,22 @@ type Props = {
 
 export function ExaminerQuestions({ questions }: Props) {
   return (
-    <article className="border-t border-rule pt-5">
-      <h3 className="text-[11px] uppercase tracking-[0.18em] text-ink/40">Examiner</h3>
+    <section className="rounded-2xl border border-rule bg-card px-6 py-6 md:px-8">
+      <h3 className="font-display text-2xl text-ink">Examiner</h3>
       {questions ? (
-        <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm leading-relaxed text-ink/70">
-          <li>{questions[0]}</li>
-          <li>{questions[1]}</li>
+        <ol className="mt-4 flex flex-col gap-3">
+          {questions.map((q, i) => (
+            <li key={i} className="flex gap-4 text-[15px] leading-relaxed text-ink/85">
+              <span className="font-display text-lg text-ink/50">{i + 1}</span>
+              <span>{q}</span>
+            </li>
+          ))}
         </ol>
       ) : (
-        <p className="mt-4 text-sm text-ink/35">
+        <p className="mt-3 text-[15px] text-ink/55">
           Stop once. Two questions from sources Scholarxiv can see.
         </p>
       )}
-    </article>
+    </section>
   );
 }

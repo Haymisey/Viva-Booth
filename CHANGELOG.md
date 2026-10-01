@@ -4,6 +4,8 @@ Team log of what shipped, broke, or got cut. Mirror important entries to STARK C
 
 ## 2026-10-01
 
+- UI: Newsreader serif for headings and timer, stronger text contrast, coloured citation badges (in corpus green, not found rust). Booth uses three ruled columns; Keep / Fix / Say shown as separate lines.
+- Session card shows the current pack, live counts, and the Say line. Recent takes are saved in this browser (`viva.sessions`, last 12): date, length, take, citation counts, Say line, examiner questions.
 - FEAT-007: two examiner questions from Scholarxiv in-corpus titles (or the packed abstract). Spoken in-browser. Start again is a second take against the same questions.
 - EthioDeploy: production start (`next start` on `0.0.0.0`), `/api/health`, Dockerfile + Nixpacks. Do not run `next dev` on the live box.
 

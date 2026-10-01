@@ -35,14 +35,17 @@ export function ManuscriptForm({
   };
 
   return (
-    <section className="flex flex-col gap-6">
+    <section className="flex flex-col gap-6 rounded-2xl border border-rule bg-card p-6 md:p-8">
       <header className="max-w-lg">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-ink/40">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink/60">
           Manuscript
         </p>
-        <h2 className="font-display mt-2 text-2xl leading-tight text-ink">
+        <h2 className="font-display mt-2 text-3xl leading-tight text-ink">
           Read this first, then listen.
         </h2>
+        <p className="mt-2 text-[15px] text-ink/65">
+          Title, question, abstract, up to five references. Or skip it and open talk.
+        </p>
       </header>
 
       <div className="grid gap-5 md:grid-cols-2">
@@ -70,7 +73,7 @@ export function ManuscriptForm({
         onChange={(e) => onChange({ ...value, abstract: e.target.value })}
       />
       <div className="grid gap-3">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-ink/45">
+        <p className="text-xs font-medium uppercase tracking-[0.12em] text-ink/60">
           References
         </p>
         {visible.map((ref, i) => (
@@ -100,7 +103,7 @@ export function ManuscriptForm({
         <Button type="button" onClick={onPrepare} disabled={disabled}>
           Prepare
         </Button>
-        <Button type="button" tone="ghost" onClick={onOpenTalk} disabled={disabled}>
+        <Button type="button" tone="line" onClick={onOpenTalk} disabled={disabled}>
           Open talk
         </Button>
       </div>

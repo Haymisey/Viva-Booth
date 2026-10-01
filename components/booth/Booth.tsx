@@ -6,6 +6,7 @@ import { ExaminerPackCard } from "@/components/booth/ExaminerPackCard";
 import { ExaminerQuestions } from "@/components/booth/ExaminerQuestions";
 import { ManuscriptForm } from "@/components/booth/ManuscriptForm";
 import { PackLibrary } from "@/components/booth/PackLibrary";
+import { RecentTakes } from "@/components/booth/RecentTakes";
 import { SessionBar } from "@/components/booth/SessionBar";
 import { startBrowserListen, type MicFailureReason } from "@/lib/browser-listen";
 import {
@@ -14,7 +15,15 @@ import {
   extractSpeechCitations,
   mergeCitations,
 } from "@/lib/extract-citations";
-import { listPacks, rememberPack } from "@/lib/library";
+import { listPacks, packLabel, rememberPack } from "@/lib/library";
+import {
+  clearSessions,
+  countStatuses,
+  listSessions,
+  rememberSession,
+  sayLine,
+  type SessionRecord,
+} from "@/lib/sessions";
 import { emptyCitations, emptyManuscript } from "@/lib/mock";
 import { buildPack, loadPack, savePack } from "@/lib/pack";
 import { requestDebrief } from "@/lib/request-debrief";
@@ -110,6 +119,7 @@ export function Booth() {
   const [hydrated, setHydrated] = useState(false);
   const [take, setTake] = useState<1 | 2>(1);
   const [questions, setQuestions] = useState<[string, string] | null>(null);
+  const [sessions, setSessions] = useState<SessionRecord[]>([]);
 
   const speak = useCallback((text: string) => {
     if (typeof window === "undefined") return;
@@ -182,11 +192,13 @@ export function Booth() {
     });
     setDebrief(debriefResult.text);
     if (debriefResult.failed) reportApiError("debrief");
-    return verified.citations;
+    return { citations: verified.citations, debrief: debriefResult.text };
   }, [language, reportApiError]);
 
   const finalizeStop = useCallback(() => {
     const spokenText = live.trim();
+    const seconds = elapsed;
+    const currentTake = take;
     const fromTalk = extractSpeechCitations(spokenText);
     setTranscript(spokenText);
     setSpoken(fromTalk);
@@ -205,20 +217,39 @@ export function Booth() {
       const speech = capSpeechCitations(mergeCitations(fromTalk, extra));
       setSpoken(speech);
 
-      const checkedList = await runVerify(mergeCitations(fromPack, speech), spokenText, abstract);
-      if (take === 1) {
+      const result = await runVerify(mergeCitations(fromPack, speech), spokenText, abstract);
+      let asked = questions;
+      if (currentTake === 1) {
         const pair = await requestQuestions({
           language,
           abstract,
-          citations: checkedList,
+          citations: result.citations,
         });
         if (pair) {
+          asked = pair;
           setQuestions(pair);
           speakQuestions(pair);
         }
       }
+
+      if (pack && (spokenText || seconds > 0)) {
+        rememberSession({
+          id: crypto.randomUUID(),
+          packId: pack.id,
+          title: packLabel(pack),
+          mode: pack.mode,
+          take: currentTake,
+          at: new Date().toISOString(),
+          seconds,
+          transcript: spokenText,
+          ...countStatuses(result.citations),
+          say: sayLine(result.debrief),
+          questions: asked,
+        });
+        setSessions(listSessions());
+      }
     })();
-  }, [live, pack, reportApiError, runVerify, take, language, speakQuestions]);
+  }, [live, elapsed, take, pack, questions, reportApiError, runVerify, language, speakQuestions]);
 
   useEffect(() => {
     const stored = loadPack();
@@ -230,6 +261,7 @@ export function Booth() {
       setFormOpen(false);
     }
     setLibrary(listPacks());
+    setSessions(listSessions());
     setHydrated(true);
   }, []);
 
@@ -326,31 +358,30 @@ export function Booth() {
 
   const formLocked = phase === "talking";
   const showForm = !hydrated || formOpen || !pack;
+  const shownTranscript = phase === "talking" ? live : transcript;
+  const shownCitations =
+    checked ??
+    mergeCitations(pack && pack.mode === "prepared" ? pack.citations : emptyCitations, spoken);
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-10 md:px-10 md:py-14">
-      <header className="flex items-baseline justify-between gap-6">
-        <h1 className="font-display text-5xl text-ink md:text-6xl">Viva</h1>
-        <p className="max-w-[13rem] text-right text-xs leading-relaxed text-ink/45">
-          Read first. Then listen. Never invent a paper.
-        </p>
+    <div className="mx-auto flex max-w-6xl flex-col gap-12 px-6 py-10 md:px-10 md:py-14">
+      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-rule pb-6">
+        <h1 className="font-display text-6xl leading-none text-ink md:text-7xl">Viva</h1>
+        <div className="flex flex-col items-end gap-3">
+          <label className="flex items-center gap-2 text-sm text-ink/65">
+            Language
+            <select
+              value={language}
+              disabled={phase === "talking"}
+              onChange={(event) => setLanguage(event.target.value === "am" ? "am" : "en")}
+              className="rounded-full border border-ink/20 bg-card px-3 py-1 text-sm text-ink outline-none disabled:opacity-50"
+            >
+              <option value="en">{labels.en}</option>
+              <option value="am">{labels.am}</option>
+            </select>
+          </label>
+        </div>
       </header>
-
-      <div className="flex items-center justify-end gap-2 text-sm text-ink/60">
-        <label htmlFor="language" className="text-[11px] uppercase tracking-[0.14em] text-ink/45">
-          Language
-        </label>
-        <select
-          id="language"
-          value={language}
-          disabled={phase === "talking"}
-          onChange={(event) => setLanguage(event.target.value === "am" ? "am" : "en")}
-          className="rounded-full border border-rule bg-paper px-3 py-1.5 text-xs tracking-wide text-ink outline-none disabled:opacity-50"
-        >
-          <option value="en">{labels.en}</option>
-          <option value="am">{labels.am}</option>
-        </select>
-      </div>
 
       {hydrated ? (
         <PackLibrary packs={library} activeId={pack?.id ?? null} onSelect={applyPack} />
@@ -365,12 +396,20 @@ export function Booth() {
           onOpenTalk={() => lockPack("open")}
         />
       ) : pack ? (
-        <ExaminerPackCard pack={pack} onEdit={() => setFormOpen(true)} />
+        <ExaminerPackCard
+          pack={pack}
+          phase={phase}
+          transcript={shownTranscript}
+          citations={shownCitations}
+          say={sayLine(debrief)}
+          onEdit={() => setFormOpen(true)}
+        />
       ) : null}
 
       <SessionBar
         phase={phase}
         elapsedSeconds={elapsed}
+        take={take}
         onStart={() => {
           if (phase === "stopped") setTake(2);
           resetSession();
@@ -380,25 +419,25 @@ export function Booth() {
         onStop={finalizeStop}
       />
 
-      <ExaminerQuestions questions={questions} />
-
       {errorText ? (
-        <p role="alert" className="-mt-6 border-t border-rule pt-4 text-sm leading-relaxed text-rust">
+        <p role="alert" className="rounded-xl border border-rust/30 bg-rust/5 px-5 py-3 text-[15px] leading-relaxed text-rust">
           {errorText}
         </p>
       ) : null}
 
-      <DebriefPanel
-        transcript={phase === "talking" ? live : transcript}
-        citations={
-          checked ??
-          mergeCitations(
-            pack && pack.mode === "prepared" ? pack.citations : emptyCitations,
-            spoken,
-          )
-        }
-        debrief={debrief}
-      />
+      <ExaminerQuestions questions={questions} />
+
+      <DebriefPanel transcript={shownTranscript} citations={shownCitations} debrief={debrief} />
+
+      {hydrated ? (
+        <RecentTakes
+          sessions={sessions}
+          onClear={() => {
+            clearSessions();
+            setSessions([]);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

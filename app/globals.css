@@ -1,19 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #16120e;
-  --paper: #f3eee6;
-  --rule: #d8d0c4;
+  --ink: #1a1612;
+  --paper: #f7f2ea;
+  --card: #fbf8f2;
+  --rule: #ddd4c6;
   --rust: #8a3d24;
+  --moss: #3d5a3a;
 }
 
 @theme inline {
   --color-ink: var(--ink);
   --color-paper: var(--paper);
+  --color-card: var(--card);
   --color-rule: var(--rule);
   --color-rust: var(--rust);
+  --color-moss: var(--moss);
   --font-sans: var(--font-geist-sans);
-  --font-display: var(--font-fraunces);
 }
 
 html,
@@ -28,8 +31,8 @@ body {
 }
 
 .font-display {
-  font-family: var(--font-display), ui-serif, Georgia, serif;
-  font-weight: 450;
+  font-family: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  font-weight: 500;
   font-optical-sizing: auto;
 }
 

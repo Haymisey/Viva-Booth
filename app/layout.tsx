@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Geist } from "next/font/google";
+import { Geist, Newsreader } from "next/font/google";
 import { VoiceRoot } from "@/components/booth/VoiceRoot";
 import "./globals.css";
 
@@ -8,9 +8,10 @@ const geist = Geist({
   subsets: ["latin"],
 });
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
   subsets: ["latin"],
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geist.variable} ${fraunces.variable} antialiased`}>
+      <body className={`${geist.variable} ${newsreader.variable} antialiased`}>
         {children}
         <VoiceRoot />
       </body>
