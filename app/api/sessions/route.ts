@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const sessions = await prisma.session.findMany({
+    const sessions = await prisma.practiceSession.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
       include: {
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       citations = [],
     } = body;
 
-    const newSession = await prisma.session.create({
+    const newSession = await prisma.practiceSession.create({
       data: {
         userId: user.id,
         title: title || "Open Defense Talk",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 export type ChatMessageItem = {
   id: string;
@@ -45,8 +45,8 @@ export function ExaminerChat({
     if (typeof window === "undefined") return;
 
     const w = window as unknown as {
-      SpeechRecognition?: new () => any;
-      webkitSpeechRecognition?: new () => any;
+      SpeechRecognition?: new () => unknown;
+      webkitSpeechRecognition?: new () => unknown;
     };
     const SpeechRecognition = w.SpeechRecognition || w.webkitSpeechRecognition;
 

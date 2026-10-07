@@ -1,37 +1,41 @@
 import type { Metadata } from "next";
-import { Newsreader, Noto_Sans_Ethiopic } from "next/font/google";
-import { VoiceRoot } from "@/components/booth/VoiceRoot";
+import { Geist_Mono, Inter, Noto_Sans_Ethiopic } from "next/font/google";
+import { Providers } from "./providers";
 import "./globals.css";
+import { cn } from "@/lib/utils";
 
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  weight: ["400", "500"],
-});
-
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 const ethiopic = Noto_Sans_Ethiopic({
-  variable: "--font-ethiopic",
   subsets: ["ethiopic"],
-  weight: ["400", "500"],
+  variable: "--font-ethiopic",
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
-  title: "Viva",
+  title: "VivaBooth | AI Thesis Defense & Viva Voce Preparation",
   description:
-    "Read the manuscript first. Then listen. Scholarxiv checks citations. Never invent a paper.",
+    "Master your thesis or dissertation defense. Upload your research, face simulated academic examiners, practice tricky oral questions, and defend your degree with confidence.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body className={`${newsreader.variable} ${ethiopic.variable} antialiased`}>
-        {children}
-        <VoiceRoot />
+    <html
+      lang="en"
+      className={cn(
+        "dark h-full antialiased scroll-smooth",
+        inter.variable,
+        geistMono.variable,
+        ethiopic.variable,
+        "font-sans"
+      )}
+    >
+      <body className="min-h-full flex flex-col bg-background text-foreground selection:bg-primary/20 selection:text-primary">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

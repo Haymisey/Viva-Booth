@@ -1,30 +1,237 @@
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id           String        @id @default(cuid())
-  name         String
-  email        String        @unique
-  passwordHash String
-  role         String        @default("student")
-  plan         String        @default("free") // "free" | "pro"
-  credits      Int           @default(5)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  sessions     Session[]
-  payments     Payment[]
+// ─── Better Auth tables (managed by Better Auth, declared here for Prisma awareness) ───
+
+model user {
+  id            String        @id
+  name          String
+  email         String        @unique
+  emailVerified Boolean       @default(false)
+  image         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  role          String        @default("student")
+  plan          String        @default("free")
+  credits       Int           @default(5)
+  sessions      session[]
+  accounts      account[]
+  projects      Project[]
+  settings      UserSettings?
+  payments      Payment[]
+  practiceSessions PracticeSession[]
+
+  @@map("user")
 }
 
-model Session {
+model session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
+}
+
+// ─── Domain models ───
+
+enum ProjectStatus {
+  DRAFT
+  READY
+  ARCHIVED
+}
+
+enum RefStatus {
+  UNVERIFIED
+  VERIFIED
+  AMBIGUOUS
+  NOT_FOUND
+  ERROR
+}
+
+enum RefSource {
+  SCHOLARXIV
+  OPENALEX
+}
+
+enum TakeKind {
+  TAKE_1
+  TAKE_2
+}
+
+enum Locale {
+  en_US
+  am_ET
+}
+
+model UserSettings {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  devMode          Boolean  @default(false)
+  geminiKeyEnc     String?  // base64(iv|tag|ciphertext)
+  scholarxivKeyEnc String?
+  geminiModel      String?
+  defaultLocale    Locale   @default(en_US)
+  showFillers      Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
+}
+
+model Project {
+  id               String        @id @default(cuid())
+  userId           String
+  user             user          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  researchQuestion String
+  abstract         String
+  status           ProjectStatus @default(DRAFT)
+  locale           Locale        @default(en_US)
+  readiness        Int           @default(0)       // 0-100 cached score
+  canvasX          Float         @default(0)
+  canvasY          Float         @default(0)
+  accent           String        @default("slate") // card color token
+  pinned           Boolean       @default(false)
+  lastTakeAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  references       Reference[]
+  takes            Take[]
+  questions        Question[]
+
+  @@index([userId, updatedAt])
+}
+
+model Reference {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ordinal     Int             // 1..5
+  rawText     String
+  title       String?
+  authors     String?
+  year        Int?
+  doi         String?
+  status      RefStatus       @default(UNVERIFIED)
+  source      RefSource?
+  matchedId   String?
+  confidence  Float?
+  verifiedAt  DateTime?
+  checks      CitationCheck[]
+
+  @@unique([projectId, ordinal])
+}
+
+model CitationCheck {
+  id          String    @id @default(cuid())
+  referenceId String
+  reference   Reference @relation(fields: [referenceId], references: [id], onDelete: Cascade)
+  provider    RefSource
+  ok          Boolean
+  latencyMs   Int
+  summary     Json?
+  createdAt   DateTime  @default(now())
+}
+
+model Take {
+  id           String    @id @default(cuid())
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number       Int       // 1-based per project
+  kind         TakeKind  @default(TAKE_1)
+  parentTakeId String?   // Take 2 -> Take 1
+  parentTake   Take?     @relation("TakeRetake", fields: [parentTakeId], references: [id], onDelete: SetNull)
+  retakes      Take[]    @relation("TakeRetake")
+  locale       Locale    @default(en_US)
+  transcript   String    @default("")
+  durationMs   Int       @default(0)
+  wordCount    Int       @default(0)
+  wpm          Float?
+  fillerCount  Int       @default(0)
+  score        Int?      // 0-100 from debrief
+  debrief      Json?     // { keep: string[], fix: string[], say: string, grading?: {...} }
+  status       String    @default("RECORDING") // RECORDING | TRANSCRIBED | DEBRIEFED
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+
+  @@unique([projectId, number])
+  @@index([projectId, startedAt])
+}
+
+model Question {
+  id               String    @id @default(cuid())
+  projectId        String
+  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  takeId           String?
+  text             String
+  groundedIn       Json      // { source: "abstract"|"reference"|"rq", refOrdinal?: number, quote?: string }
+  answerTranscript String?
+  answerScore      Int?
+  answerFeedback   String?
+  createdAt        DateTime  @default(now())
+  answeredAt       DateTime?
+
+  @@index([projectId, createdAt])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  userId        String
+  user          user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider      String   // "chapa" | "stripe" | "test"
+  txRef         String   @unique
+  amount        Float
+  currency      String   @default("ETB")
+  status        String   @default("pending") // "pending" | "completed" | "failed"
+  planPurchased String
+  createdAt     DateTime @default(now())
+}
+
+model PracticeSession {
   id            String        @id @default(cuid())
   userId        String
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          user          @relation(fields: [userId], references: [id], onDelete: Cascade)
   packId        String?
   title         String
   mode          String        @default("open")
@@ -41,26 +248,18 @@ model Session {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   messages      ChatMessage[]
+
+  @@map("practice_session")
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
+  id        String          @id @default(cuid())
   sessionId String
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  role      String   // "student" | "examiner"
+  session   PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String          // "student" | "examiner"
   content   String
-  createdAt DateTime @default(now())
+  createdAt DateTime        @default(now())
+
+  @@map("chat_message")
 }
 
-model Payment {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider      String   // "chapa" | "stripe" | "test"
-  txRef         String   @unique
-  amount        Float
-  currency      String   @default("ETB")
-  status        String   @default("pending") // "pending" | "completed" | "failed"
-  planPurchased String
-  createdAt     DateTime @default(now())
-}

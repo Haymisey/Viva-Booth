@@ -13,7 +13,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    const session = await prisma.session.findUnique({
+    const session = await prisma.practiceSession.findUnique({
       where: { id },
       include: {
         messages: {
@@ -44,7 +44,7 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const session = await prisma.session.findUnique({
+    const session = await prisma.practiceSession.findUnique({
       where: { id },
     });
 
@@ -52,7 +52,7 @@ export async function DELETE(
       return NextResponse.json({ ok: false, error: "Session not found" }, { status: 404 });
     }
 
-    await prisma.session.delete({
+    await prisma.practiceSession.delete({
       where: { id },
     });
 

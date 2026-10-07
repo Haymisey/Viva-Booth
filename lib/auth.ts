@@ -1,69 +1,65 @@
-import bcrypt from "bcryptjs";
-import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db";
 
-export const AUTH_COOKIE_NAME = "viva_auth_token";
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "viva-default-development-secret-key-32charslong!"
-);
-
-export type TokenPayload = {
-  userId: string;
-  email: string;
-  name: string;
-};
-
-export async function hashPassword(password: string): Promise<string> {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(password, salt);
-}
-
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
-
-export async function signToken(payload: TokenPayload): Promise<string> {
-  return new SignJWT(payload)
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("30d")
-    .sign(JWT_SECRET);
-}
-
-export async function verifyToken(token: string): Promise<TokenPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as unknown as TokenPayload;
-  } catch {
-    return null;
-  }
-}
+export const auth = betterAuth({
+  secret: process.env.BETTER_AUTH_SECRET || "development-and-build-secret-key-32-chars-minimum",
+  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  database: prismaAdapter(prisma, {
+    provider: "postgresql",
+  }),
+  emailAndPassword: {
+    enabled: true,
+    minPasswordLength: 8,
+  },
+  socialProviders: {
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          },
+        }
+      : {}),
+    ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
+      ? {
+          github: {
+            clientId: process.env.GITHUB_CLIENT_ID,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET,
+          },
+        }
+      : {}),
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 30, // 30 days
+    updateAge: 60 * 60 * 24, // 24 hours
+  },
+  user: {
+    additionalFields: {
+      role: { type: "string", defaultValue: "student" },
+      plan: { type: "string", defaultValue: "free" },
+      credits: { type: "number", defaultValue: 5 },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          try {
+            await prisma.userSettings.create({
+              data: { userId: user.id },
+            });
+          } catch (err) {
+            console.error("Failed to create UserSettings for user:", user.id, err);
+          }
+        },
+      },
+    },
+  },
+});
 
 export async function getSessionUser() {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
-    if (!token) return null;
-
-    const payload = await verifyToken(token);
-    if (!payload?.userId) return null;
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        plan: true,
-        credits: true,
-        createdAt: true,
-      },
-    });
-
-    return user;
-  } catch {
-    return null;
-  }
+  const { getUser } = await import("./server/session");
+  return getUser();
 }
+

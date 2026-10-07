@@ -14,7 +14,7 @@ export async function POST(
     }
 
     const { id } = await params;
-    const session = await prisma.session.findUnique({
+    const session = await prisma.practiceSession.findUnique({
       where: { id },
       include: {
         messages: {
@@ -46,7 +46,7 @@ export async function POST(
     });
 
     // 2. Generate examiner feedback and follow-up question
-    const history = session.messages.map((m) => ({
+    const history = session.messages.map((m: { role: string; content: string }) => ({
       role: m.role,
       content: m.content,
     }));

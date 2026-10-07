@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/badge";
 import { copyFor } from "@/lib/copy";
 import type { Verdict } from "@/lib/gemini";
 import type { AppLanguage, Citation } from "@/lib/types";
