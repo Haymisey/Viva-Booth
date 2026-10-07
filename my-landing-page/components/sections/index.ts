@@ -1,0 +1,8 @@
+export { HeroSection } from "./hero-section"
+export { TrustBanner } from "./trust-banner"
+export { FeaturesSection } from "./features-section"
+export { HowItWorksSection } from "./how-it-works-section"
+export { PricingSection } from "./pricing-section"
+export { FaqSection } from "./faq-section"
+export { CtaSection } from "./cta-section"
+export { Footer } from "./footer"
