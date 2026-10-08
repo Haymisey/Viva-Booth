@@ -64,7 +64,7 @@ export function NavMobile({ isLoginPage = false }: NavMobileProps) {
               >
                 <Button className="w-full gap-2">
                   <LayoutDashboard className="size-4" />
-                  <span>Dashboard</span>
+                  <span>Open Dashboard</span>
                 </Button>
               </Link>
             ) : (

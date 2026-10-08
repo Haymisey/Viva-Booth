@@ -13,7 +13,10 @@ const ethiopic = Noto_Sans_Ethiopic({
 });
 
 export const metadata: Metadata = {
-  title: "VivaBooth | AI Thesis Defense & Viva Voce Preparation",
+  title: {
+    default: "VivaBooth · AI Thesis Defense",
+    template: "%s · Viva-Booth",
+  },
   description:
     "Master your thesis or dissertation defense. Upload your research, face simulated academic examiners, practice tricky oral questions, and defend your degree with confidence.",
 };

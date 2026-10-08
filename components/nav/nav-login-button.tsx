@@ -28,7 +28,7 @@ export function NavLoginButton({ isLoginPage = false }: NavLoginButtonProps) {
       <Link href="/dashboard">
         <Button size="sm" className="gap-1.5 font-medium shadow-md shadow-primary/20">
           <LayoutDashboard className="size-3.5" />
-          <span>Dashboard</span>
+          <span>Open Dashboard</span>
         </Button>
       </Link>
     );
