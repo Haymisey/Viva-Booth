@@ -16,6 +16,7 @@ Team log of what shipped, broke, or got cut. Mirror important entries to STARK C
 - Paper attach no longer leaks the browser “No file chosen” control.
 - Long Transcript, Citations, Say it like this, and the examiner thread cap and scroll. The Windows scrollbar (arrows and all) is hidden; a thin pill shows only while that column is moving. At the top or bottom of a column, the next wheel continues the page.
 - Landing preview card: “Sample session” looked like a link and did nothing. It is now a **Preview** label. Begin your practice is the way into the booth. Paper upload is in, not yet live-tested.
+- Favicon: cream **V.** with the rose period (`app/favicon.ico`, `app/icon.png`, Apple touch icon).
 
 ## 2026-10-01
 
