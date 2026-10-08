@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { getSessionUser } from "@/lib/auth";
 import { generateDebrief, judgeAnswers, talkWordCount } from "@/lib/gemini";
+import { formatPaperForPrompt, parsePaperJson } from "@/lib/paper";
+import { recentCoachNotes } from "@/lib/session-memory";
 
 export const runtime = "nodejs";
 
@@ -13,6 +16,7 @@ export async function POST(request: Request) {
       questions?: unknown;
       followUps?: boolean;
       seconds?: number;
+      paper?: unknown;
     };
     const language = body.language === "am" ? "am" : "en";
     const questions = Array.isArray(body.questions)
@@ -36,12 +40,19 @@ export async function POST(request: Request) {
     }
     const transcript = body.transcript ?? "";
     const seconds = typeof body.seconds === "number" && Number.isFinite(body.seconds) ? body.seconds : 0;
+    const user = await getSessionUser().catch(() => null);
+    const paper = formatPaperForPrompt(parsePaperJson(body.paper));
+    const packed = body.abstract?.trim()
+      ? `${paper}\n\nPacked abstract:\n${body.abstract.trim()}`
+      : paper;
     const text = await generateDebrief({
       transcript,
       citations: Array.isArray(body.citations) ? body.citations : [],
       seconds,
       wordCount: talkWordCount(transcript),
       language,
+      paper: packed,
+      priorNotes: await recentCoachNotes(user?.id),
     });
     if (!text) return NextResponse.json({ error: "Debrief failed" }, { status: 502 });
     return NextResponse.json({ text, verdicts: [], followUps: [] });

@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Menu } from "lucide-react";
 import { DebriefPanel } from "@/components/booth/DebriefPanel";
+import { ExaminerDoor, type ExamTurn } from "@/components/booth/ExaminerDoor";
+import { PaperStrip } from "@/components/booth/PaperStrip";
 import { SessionBar } from "@/components/booth/SessionBar";
 import { startBrowserListen, type MicFailureReason } from "@/lib/browser-listen";
 import {
@@ -19,6 +22,7 @@ import { mergeSpeech } from "@/lib/speech-clean";
 import { verifyCitations } from "@/lib/verify-citations";
 import { hushVoxide } from "@/lib/voxide-client";
 import { Wordmark } from "@/components/viva/Wordmark";
+import { emptyPaper, type PaperContext } from "@/lib/paper";
 import { countStatuses, sayLine, titleFromTranscript } from "@/lib/sessions";
 import type { AppLanguage, Citation, SessionPhase } from "@/lib/types";
 
@@ -28,13 +32,17 @@ export type LoadedTalk = {
   seconds: number;
   debrief: string;
   citations: Citation[];
+  paper?: PaperContext | null;
+  messages?: ExamTurn[];
 };
 
 type BoothProps = {
   signedIn?: boolean;
   loadedTalk?: LoadedTalk | null;
   keepTalksLink?: ReactNode;
-  onNewPractice?: () => void;
+  freshNonce?: number;
+  onDetachTalk?: () => void;
+  onOpenMenu?: () => void;
   onTalkSaved?: (id: string) => void;
 };
 
@@ -52,7 +60,9 @@ export function Booth({
   signedIn = false,
   loadedTalk = null,
   keepTalksLink = null,
-  onNewPractice,
+  freshNonce = 0,
+  onDetachTalk,
+  onOpenMenu,
   onTalkSaved,
 }: BoothProps) {
   const [phase, setPhase] = useState<SessionPhase>("idle");
@@ -64,6 +74,8 @@ export function Booth({
   const [debrief, setDebrief] = useState("");
   const [errorText, setErrorText] = useState("");
   const [language, setLanguage] = useState<AppLanguage>("en");
+  const [paper, setPaper] = useState<PaperContext>(emptyPaper);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const text = copyFor(language);
 
   useEffect(() => {
@@ -80,8 +92,24 @@ export function Booth({
     setDebrief(loadedTalk.debrief);
     setElapsed(loadedTalk.seconds);
     setErrorText("");
+    setPaper(loadedTalk.paper ?? emptyPaper());
+    setSessionId(loadedTalk.id);
     setPhase("stopped");
   }, [loadedTalk?.id]);
+
+  useEffect(() => {
+    if (freshNonce === 0) return;
+    liveRef.current = "";
+    setLive("");
+    setTranscript("");
+    setChecked(null);
+    setDebrief("");
+    setElapsed(0);
+    setErrorText("");
+    setPaper(emptyPaper());
+    setSessionId(null);
+    setPhase("idle");
+  }, [freshNonce]);
 
   const chooseLanguage = (next: AppLanguage) => {
     setLanguage(next);
@@ -111,6 +139,7 @@ export function Booth({
     setDebrief("");
     setElapsed(0);
     setErrorText("");
+    setSessionId(null);
   }, []);
 
   const runVerify = useCallback(async (list: Citation[], spokenText: string, seconds: number) => {
@@ -126,6 +155,7 @@ export function Booth({
       citations: verified.citations,
       seconds,
       language,
+      paper,
     });
     setDebrief(debriefResult.text);
     if (debriefResult.failed) {
@@ -150,15 +180,19 @@ export function Booth({
             say: sayLine(debriefResult.text),
             debrief: debriefResult.text,
             citations: verified.citations,
+            paper,
           }),
         });
         const json = await res.json();
-        if (json.ok && json.session?.id) onTalkSaved?.(json.session.id);
+        if (json.ok && json.session?.id) {
+          setSessionId(json.session.id);
+          onTalkSaved?.(json.session.id);
+        }
       } catch {
         /* keep the debrief even if history fails */
       }
     }
-  }, [language, onTalkSaved, reportError, signedIn]);
+  }, [language, onTalkSaved, paper, reportError, signedIn]);
 
   const finalizeStop = useCallback(() => {
     const spokenText = liveRef.current.trim();
@@ -244,9 +278,21 @@ export function Booth({
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-8 md:px-12 md:py-10">
       <header className="flex items-end justify-between gap-6 border-b border-rule pb-8">
-        <h1 className="leading-none">
-          <Wordmark className="wordmark" />
-        </h1>
+        <div className="flex items-center gap-2">
+          {onOpenMenu ? (
+            <button
+              type="button"
+              className="booth-menu"
+              aria-label={language === "am" ? "ንግግሮች ክፈት" : "Open talks"}
+              onClick={onOpenMenu}
+            >
+              <Menu size={22} strokeWidth={1.75} />
+            </button>
+          ) : null}
+          <h1 className="leading-none">
+            <Wordmark className="wordmark" />
+          </h1>
+        </div>
         <div className="mb-2 flex shrink-0 items-center gap-4">
           {keepTalksLink}
           <label>
@@ -263,14 +309,17 @@ export function Booth({
         </div>
       </header>
 
-      <div className="flex flex-col gap-16 pt-14 md:pt-20">
+      <div className="flex flex-col gap-16 pt-6 md:pt-8">
         <SessionBar
           phase={phase}
           elapsedSeconds={elapsed}
           startLabel={text.start}
           stopLabel={text.stop}
+          extra={
+            <PaperStrip paper={paper} language={language} disabled={phase === "talking"} onChange={setPaper} />
+          }
           onStart={() => {
-            onNewPractice?.();
+            onDetachTalk?.();
             resetSession();
             setPhase("talking");
             hushVoxide();
@@ -285,6 +334,20 @@ export function Booth({
         ) : null}
 
         <DebriefPanel transcript={shownTranscript} citations={checked ?? []} debrief={debrief} language={language} />
+
+        <ExaminerDoor
+          language={language}
+          phaseTalking={phase === "talking"}
+          stopped={phase === "stopped"}
+          debrief={debrief}
+          transcript={transcript}
+          seconds={elapsed}
+          citations={checked ?? []}
+          paper={paper}
+          sessionId={sessionId}
+          loadedTalkId={loadedTalk?.id ?? null}
+          initialTurns={loadedTalk?.messages ?? []}
+        />
       </div>
     </div>
   );

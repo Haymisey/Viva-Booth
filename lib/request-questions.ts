@@ -1,11 +1,14 @@
+import type { PaperContext } from "./paper";
 import type { Citation } from "./types";
 
 export async function requestQuestions(input: {
   language: "en" | "am";
   abstract: string;
   transcript: string;
+  seconds: number;
   citations: Citation[];
   count?: number;
+  paper?: PaperContext | null;
 }): Promise<{ note: string | null; questions: string[] } | null> {
   const hits: { title: string; abstract?: string }[] = [];
   const seen = new Set<string>();
@@ -29,7 +32,9 @@ export async function requestQuestions(input: {
         language: input.language,
         abstract: input.abstract,
         transcript: input.transcript,
-        count: input.count === 2 ? 2 : 4,
+        seconds: input.seconds,
+        paper: input.paper ?? null,
+        count: input.count === 1 ? 1 : input.count === 2 ? 2 : 4,
         matchedElsewhere: corpusCount === 0 && hits.length > 0,
         hits,
       }),

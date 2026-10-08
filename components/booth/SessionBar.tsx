@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { SessionPhase } from "@/lib/types";
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
   stopLabel: string;
   onStart: () => void;
   onStop: () => void;
+  extra?: ReactNode;
 };
 
 export function formatTime(total: number) {
@@ -22,7 +24,7 @@ export function formatTime(total: number) {
 const pill =
   "inline-flex min-w-32 items-center justify-center rounded-full px-6 py-2.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40";
 
-export function SessionBar({ phase, elapsedSeconds, startLabel, stopLabel, onStart, onStop }: Props) {
+export function SessionBar({ phase, elapsedSeconds, startLabel, stopLabel, onStart, onStop, extra }: Props) {
   const canStart = phase !== "talking";
   const canStop = phase === "talking";
 
@@ -44,6 +46,7 @@ export function SessionBar({ phase, elapsedSeconds, startLabel, stopLabel, onSta
           {stopLabel}
         </button>
       </div>
+      {extra}
     </div>
   );
 }

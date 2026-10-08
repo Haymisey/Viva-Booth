@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Booth, type LoadedTalk } from "@/components/booth/Booth";
 import { PracticeRail, type TalkSummary } from "@/components/booth/PracticeRail";
 import { authClient, useSession } from "@/lib/auth-client";
+import { parsePaperJson } from "@/lib/paper";
 import type { Citation } from "@/lib/types";
 
 function citationsFromSaved(raw: unknown): Citation[] {
@@ -41,7 +42,20 @@ export function PracticeShell() {
   const [talks, setTalks] = useState<TalkSummary[]>([]);
   const [loaded, setLoaded] = useState<LoadedTalk | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 800px)");
+    const sync = () => setCollapsed(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  const closeIfMobile = () => {
+    if (window.matchMedia("(max-width: 800px)").matches) setCollapsed(true);
+  };
   const [profile, setProfile] = useState<{ name: string; email: string } | null>(null);
+  const [freshNonce, setFreshNonce] = useState(0);
 
   const refreshTalks = useCallback(async () => {
     const res = await fetch("/api/sessions");
@@ -79,6 +93,9 @@ export function PracticeShell() {
         seconds: number;
         debrief: string | null;
         citationsJson: string | null;
+        paperJson?: string | null;
+        questionNote?: string | null;
+        messages?: { role: string; content: string }[];
       };
       let citations: Citation[] = [];
       try {
@@ -92,6 +109,13 @@ export function PracticeShell() {
         seconds: session.seconds,
         debrief: session.debrief ?? "",
         citations,
+        paper: parsePaperJson(session.paperJson) ?? parsePaperJson(session.questionNote),
+        messages: (session.messages ?? [])
+          .filter((row) => row.role === "examiner" || row.role === "student")
+          .map((row) => ({
+            role: row.role as "examiner" | "student",
+            content: row.content,
+          })),
       });
     })();
     return () => {
@@ -101,15 +125,31 @@ export function PracticeShell() {
 
   const openNew = () => {
     setLoaded(null);
+    setFreshNonce((n) => n + 1);
+    closeIfMobile();
+    router.replace("/practice");
+  };
+
+  const detachTalk = () => {
+    setLoaded(null);
     router.replace("/practice");
   };
 
   const openTalk = (id: string) => {
+    closeIfMobile();
     router.replace(`/practice?s=${id}`);
   };
 
   return (
     <div className="practice-shell">
+      {user && !collapsed ? (
+        <button
+          type="button"
+          className="practice-rail-scrim"
+          aria-label="Close talks"
+          onClick={() => setCollapsed(true)}
+        />
+      ) : null}
       {user ? (
         <PracticeRail
           collapsed={collapsed}
@@ -131,6 +171,15 @@ export function PracticeShell() {
         <Booth
           signedIn={Boolean(user)}
           loadedTalk={activeId ? loaded : null}
+          freshNonce={freshNonce}
+          onDetachTalk={detachTalk}
+          onOpenMenu={() => {
+            if (!user) {
+              router.push("/auth/signin?callbackUrl=/practice");
+              return;
+            }
+            setCollapsed(false);
+          }}
           keepTalksLink={
             !user ? (
               <Link href="/auth/signin?callbackUrl=/practice" className="keep-talks">
@@ -138,7 +187,6 @@ export function PracticeShell() {
               </Link>
             ) : null
           }
-          onNewPractice={openNew}
           onTalkSaved={(id) => {
             void refreshTalks();
             router.replace(`/practice?s=${id}`);

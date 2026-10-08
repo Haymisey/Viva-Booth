@@ -54,6 +54,7 @@ export async function POST(req: Request) {
       questionNote = null,
       questions = [],
       citations = [],
+      paper = null,
     } = body;
 
     const newSession = await prisma.practiceSession.create({
@@ -70,8 +71,9 @@ export async function POST(req: Request) {
         unverified: Number(unverified) || 0,
         say: say || null,
         debrief: debrief || null,
-        questionNote: questionNote || null,
+        questionNote: questionNote || (paper ? JSON.stringify(paper) : null),
         citationsJson: JSON.stringify(citations),
+        paperJson: paper ? JSON.stringify(paper) : null,
         // If initial questions were generated, add the first question as an examiner opening message
         messages: Array.isArray(questions) && questions.length > 0
           ? {
