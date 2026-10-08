@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { DebriefPanel } from "@/components/booth/DebriefPanel";
 import { SessionBar } from "@/components/booth/SessionBar";
 import { startBrowserListen, type MicFailureReason } from "@/lib/browser-listen";
@@ -19,7 +19,24 @@ import { mergeSpeech } from "@/lib/speech-clean";
 import { verifyCitations } from "@/lib/verify-citations";
 import { hushVoxide } from "@/lib/voxide-client";
 import { Wordmark } from "@/components/viva/Wordmark";
+import { countStatuses, sayLine, titleFromTranscript } from "@/lib/sessions";
 import type { AppLanguage, Citation, SessionPhase } from "@/lib/types";
+
+export type LoadedTalk = {
+  id: string;
+  transcript: string;
+  seconds: number;
+  debrief: string;
+  citations: Citation[];
+};
+
+type BoothProps = {
+  signedIn?: boolean;
+  loadedTalk?: LoadedTalk | null;
+  keepTalksLink?: ReactNode;
+  onNewPractice?: () => void;
+  onTalkSaved?: (id: string) => void;
+};
 
 const micErrorText = {
   en: copyFor("en").mic,
@@ -31,7 +48,13 @@ const apiErrorText = {
   am: copyFor("am").api,
 };
 
-export function Booth() {
+export function Booth({
+  signedIn = false,
+  loadedTalk = null,
+  keepTalksLink = null,
+  onNewPractice,
+  onTalkSaved,
+}: BoothProps) {
   const [phase, setPhase] = useState<SessionPhase>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [live, setLive] = useState("");
@@ -47,6 +70,18 @@ export function Booth() {
     const settings = loadSettings();
     setLanguage(settings.language);
   }, []);
+
+  useEffect(() => {
+    if (!loadedTalk) return;
+    liveRef.current = loadedTalk.transcript;
+    setLive("");
+    setTranscript(loadedTalk.transcript);
+    setChecked(loadedTalk.citations);
+    setDebrief(loadedTalk.debrief);
+    setElapsed(loadedTalk.seconds);
+    setErrorText("");
+    setPhase("stopped");
+  }, [loadedTalk?.id]);
 
   const chooseLanguage = (next: AppLanguage) => {
     setLanguage(next);
@@ -97,7 +132,33 @@ export function Booth() {
       const notice = debriefResult.message === quotaNotice ? copyFor(language).quota : debriefResult.message;
       reportError(notice || apiErrorText[language].debrief);
     }
-  }, [language, reportError]);
+
+    if (signedIn && spokenText) {
+      const counts = countStatuses(verified.citations);
+      try {
+        const res = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: titleFromTranscript(spokenText),
+            mode: "open",
+            seconds,
+            transcript: spokenText,
+            inCorpus: counts.inCorpus,
+            notFound: counts.notFound,
+            unverified: counts.unverified,
+            say: sayLine(debriefResult.text),
+            debrief: debriefResult.text,
+            citations: verified.citations,
+          }),
+        });
+        const json = await res.json();
+        if (json.ok && json.session?.id) onTalkSaved?.(json.session.id);
+      } catch {
+        /* keep the debrief even if history fails */
+      }
+    }
+  }, [language, onTalkSaved, reportError, signedIn]);
 
   const finalizeStop = useCallback(() => {
     const spokenText = liveRef.current.trim();
@@ -186,17 +247,20 @@ export function Booth() {
         <h1 className="leading-none">
           <Wordmark className="wordmark" />
         </h1>
-        <label className="mb-2 shrink-0">
-          <span className="sr-only">{language === "am" ? "ቋንቋ" : "Language"}</span>
-          <select
-            value={language}
-            onChange={(event) => chooseLanguage(event.target.value === "am" ? "am" : "en")}
-            className="rounded-full border border-ink/20 bg-transparent px-3 py-2 text-sm text-ink outline-none"
-          >
-            <option value="en">English</option>
-            <option value="am">አማርኛ</option>
-          </select>
-        </label>
+        <div className="mb-2 flex shrink-0 items-center gap-4">
+          {keepTalksLink}
+          <label>
+            <span className="sr-only">{language === "am" ? "ቋንቋ" : "Language"}</span>
+            <select
+              value={language}
+              onChange={(event) => chooseLanguage(event.target.value === "am" ? "am" : "en")}
+              className="rounded-full border border-ink/20 bg-transparent px-3 py-2 text-sm text-ink outline-none"
+            >
+              <option value="en">English</option>
+              <option value="am">አማርኛ</option>
+            </select>
+          </label>
+        </div>
       </header>
 
       <div className="flex flex-col gap-16 pt-14 md:pt-20">
@@ -206,6 +270,7 @@ export function Booth() {
           startLabel={text.start}
           stopLabel={text.stop}
           onStart={() => {
+            onNewPractice?.();
             resetSession();
             setPhase("talking");
             hushVoxide();

@@ -9,7 +9,7 @@ import { authClient } from "@/lib/auth-client";
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/practice";
 
   const [showPassword, setShowPassword] = React.useState(false);
   const [email, setEmail] = React.useState("");

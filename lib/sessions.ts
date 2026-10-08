@@ -63,6 +63,13 @@ export function clearSessions() {
   write([]);
 }
 
+export function titleFromTranscript(text: string) {
+  const words = text.trim().replace(/\s+/g, " ").split(" ").filter(Boolean).slice(0, 8);
+  if (words.length === 0) return "Untitled practice";
+  const title = words.join(" ");
+  return title.length > 52 ? `${title.slice(0, 49)}…` : title;
+}
+
 export function sayLine(debrief: string) {
   return debrief.match(/^Say:\s*(.+)$/m)?.[1]?.trim() ?? "";
 }

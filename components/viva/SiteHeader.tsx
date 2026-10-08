@@ -2,15 +2,23 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Wordmark } from "./Wordmark";
 
-export function SiteHeader({ simple = false }: { simple?: boolean }) {
+export function SiteHeader({
+  simple = false,
+  backHref = "/",
+  backLabel = "Back to Viva",
+}: {
+  simple?: boolean;
+  backHref?: string;
+  backLabel?: string;
+}) {
   return (
     <header className="site-header">
       <Wordmark />
       {simple ? null : <span className="header-note">A little practice. A clearer voice.</span>}
       <nav aria-label="Main navigation">
         {simple ? (
-          <Link href="/" className="quiet-button">
-            Back to Viva <ArrowUpRight size={14} />
+          <Link href={backHref} className="quiet-button">
+            {backLabel} <ArrowUpRight size={14} />
           </Link>
         ) : (
           <>

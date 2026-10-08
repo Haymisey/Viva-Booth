@@ -11,11 +11,13 @@ export async function GET() {
 
     const sessions = await prisma.practiceSession.findMany({
       where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: {
-          select: { messages: true },
-        },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        seconds: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
@@ -33,18 +35,6 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { ok: false, error: "Please log in or create an account to save sessions." },
         { status: 401 }
-      );
-    }
-
-    // Check credits if on free plan
-    if (user.plan === "free" && user.credits <= 0) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "You have used all your free defense takes. Upgrade to Pro for unlimited sessions.",
-          needsUpgrade: true,
-        },
-        { status: 403 }
       );
     }
 
@@ -92,18 +82,7 @@ export async function POST(req: Request) {
             }
           : undefined,
       },
-      include: {
-        messages: true,
-      },
     });
-
-    // Deduct 1 credit if on free plan
-    if (user.plan === "free") {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { credits: { decrement: 1 } },
-      });
-    }
 
     return NextResponse.json({ ok: true, session: newSession });
   } catch (error) {

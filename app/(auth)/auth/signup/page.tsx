@@ -9,7 +9,7 @@ import { authClient } from "@/lib/auth-client";
 function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/practice";
 
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -37,7 +37,7 @@ function SignUpForm() {
       });
 
       if (res.error) {
-        setErrorMessage(res.error.message || "Failed to create account.");
+        setErrorMessage(res.error.message?.trim() || "Failed to create account.");
         setIsLoading(false);
       } else {
         router.push(callbackUrl);
