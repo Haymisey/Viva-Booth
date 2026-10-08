@@ -2,6 +2,15 @@
 
 Team log of what shipped, broke, or got cut. Mirror important entries to STARK Changelogs.
 
+## 2026-10-09
+
+- Practice history is a ChatGPT-style rail, not a last-session-only save and not a Figma canvas. Signed-in talks persist in the database. New practice, search, open a talk, delete a talk. On a phone the rail is hidden; a menu next to Viva. opens the same list.
+- Phase 3 canvas / five-reference project dashboard is cut. History is enough.
+- Add paper sits under Start/Stop as one serif link. A PDF (10 MB / 20 pages) or a pasted excerpt is optional. The coach and examiner see that excerpt plus the talk. Signed-in debriefs also see notes from the last 10 talks.
+- After a real Stop, Ask me questions is a second door. Too short (under 20s or 40 words) stays closed. One question at a time; Gemini is not replaced with canned lines.
+- Settings (paper page): name, password change (other sessions revoked), optional Gemini BYOK encrypted at rest. GitHub login is gone. After sign-in, the app opens `/practice`.
+- Landing and booth stay cream paper (Instrument Serif, Manrope). The dark AppShell is leftover, not the product.
+
 ## 2026-10-01
 
 - The front door is the paper landing (Instrument Serif, Manrope). Sign in and Get started stay on the existing accounts. Begin your practice opens `/practice`, the one-page booth, without the dark shell.
