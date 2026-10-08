@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { formatTime } from "@/components/booth/SessionBar";
 import type { SessionRecord } from "@/lib/sessions";
 

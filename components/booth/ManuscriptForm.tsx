@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { TextArea, TextField } from "@/components/ui/Field";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import type { Manuscript } from "@/lib/types";
 
 type Props = {
