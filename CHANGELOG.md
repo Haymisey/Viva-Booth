@@ -15,7 +15,6 @@ Team log of what shipped, broke, or got cut. Mirror important entries to STARK C
 - Voxide stays mounted for Start/Stop, but the orange mic disconnects on Stop, Ask me questions, Speak, and Answer so it does not talk over the exam.
 - Paper attach no longer leaks the browser “No file chosen” control.
 - Long Transcript, Citations, Say it like this, and the examiner thread cap and scroll. The Windows scrollbar (arrows and all) is hidden; a thin pill shows only while that column is moving. At the top or bottom of a column, the next wheel continues the page.
-- `/demo` is a scroll-driven film of the booth for a YouTube screen recording. It is not the live practice page.
 
 ## 2026-10-01
 

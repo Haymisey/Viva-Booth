@@ -473,7 +473,7 @@
 .haven .sample-label {
   display: flex;
   align-items: center;
-  gap: 9px;
+  pointer-events: none;
 }
 
 .haven .preview-main {
