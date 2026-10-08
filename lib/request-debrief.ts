@@ -1,4 +1,5 @@
 import type { Verdict } from "./gemini";
+import type { PaperContext } from "./paper";
 import type { Citation } from "./types";
 
 export type DebriefResult = {
@@ -14,6 +15,7 @@ export async function requestDebrief(input: {
   citations: Citation[];
   seconds: number;
   language: "en" | "am";
+  paper?: PaperContext | null;
 }) {
   try {
     const res = await fetch("/api/debrief", {
@@ -28,6 +30,7 @@ export async function requestDebrief(input: {
         })),
         seconds: input.seconds,
         language: input.language,
+        paper: input.paper ?? null,
         questions: [],
       }),
     });

@@ -51,12 +51,23 @@ export async function POST(
       content: m.content,
     }));
 
-    const examinerReplyText = await generateExaminerReply({
+    const { parsePaperJson } = await import("@/lib/paper");
+    const { recentCoachNotes } = await import("@/lib/session-memory");
+    const { talkWordCount } = await import("@/lib/gemini");
+    const { withUserGemini } = await import("@/lib/server/keys");
+    const priorNotes = await recentCoachNotes(user.id);
+    const examinerReplyText = await withUserGemini(() => generateExaminerReply({
       sessionTitle: session.title,
       transcript: session.transcript,
       history,
       studentReply: cleanAnswer,
-    });
+      paper: parsePaperJson(session.paperJson),
+      priorNotes,
+      wordCount: talkWordCount(session.transcript),
+    }));
+    if (!examinerReplyText) {
+      return NextResponse.json({ ok: false, error: "Examiner failed" }, { status: 502 });
+    }
 
     // 3. Record examiner's response
     const examinerMessage = await prisma.chatMessage.create({

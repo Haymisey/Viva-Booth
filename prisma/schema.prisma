@@ -245,6 +245,7 @@ model PracticeSession {
   debrief       String?
   questionNote  String?
   citationsJson String?
+  paperJson     String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   messages      ChatMessage[]

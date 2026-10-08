@@ -5,14 +5,13 @@ const IV_LENGTH = 12; // 96 bits for GCM
 
 function getKey(): Buffer {
   const secret = process.env.ENCRYPTION_KEY;
-  if (!secret) {
-    throw new Error("ENCRYPTION_KEY environment variable is not set");
+  if (secret) {
+    const keyBuf = Buffer.from(secret, "base64");
+    if (keyBuf.length === 32) return keyBuf;
   }
-  const keyBuf = Buffer.from(secret, "base64");
-  if (keyBuf.length !== 32) {
-    throw new Error("ENCRYPTION_KEY must decode to exactly 32 bytes (256 bits)");
-  }
-  return keyBuf;
+  const fallback = process.env.BETTER_AUTH_SECRET?.trim();
+  if (fallback) return crypto.createHash("sha256").update(fallback).digest();
+  throw new Error("ENCRYPTION_KEY environment variable is not set");
 }
 
 /**

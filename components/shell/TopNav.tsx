@@ -42,9 +42,9 @@ export function TopNav({ user }: TopNavProps) {
     },
     {
       name: "Booth",
-      href: "/legacy-booth",
+      href: "/practice",
       icon: Sparkles,
-      active: pathname === "/legacy-booth" || pathname?.startsWith("/booth"),
+      active: pathname === "/practice" || pathname?.startsWith("/booth"),
     },
     {
       name: "Settings",

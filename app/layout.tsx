@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Inter, Noto_Sans_Ethiopic } from "next/font/google";
+import { Geist_Mono, Instrument_Serif, Inter, Manrope, Noto_Sans_Ethiopic } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,17 @@ const ethiopic = Noto_Sans_Ethiopic({
   subsets: ["ethiopic"],
   variable: "--font-ethiopic",
   weight: ["400", "500", "600"],
+});
+const instrument = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument",
+});
+const manrope = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-manrope",
 });
 
 export const metadata: Metadata = {
@@ -30,10 +41,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn(
-        "dark h-full antialiased scroll-smooth",
+        "h-full antialiased scroll-smooth",
         inter.variable,
         geistMono.variable,
         ethiopic.variable,
+        instrument.variable,
+        manrope.variable,
         "font-sans"
       )}
     >

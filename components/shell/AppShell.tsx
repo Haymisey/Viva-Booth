@@ -9,7 +9,7 @@ interface AppShellProps {
 
 export function AppShell({ user, children }: AppShellProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="dark min-h-screen flex flex-col bg-background text-foreground">
       <TopNav user={user} />
       <main className="flex-1 flex flex-col">{children}</main>
     </div>

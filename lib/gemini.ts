@@ -1,16 +1,19 @@
 import { significantTokens } from "./citation-match";
+import { activeGeminiKey } from "./gemini-key";
+
+export { talkIsReady, talkWordCount } from "./talk-ready";
 
 type GeminiJson = {
   candidates?: { content?: { parts?: { text?: string }[] } }[];
 };
 
 function geminiKey() {
-  return process.env.GEMINI_API_KEY?.trim().replace(/^["']|["']$/g, "") ?? "";
+  return activeGeminiKey();
 }
 
-function geminiUrl() {
+function geminiUrl(key: string) {
   const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
-  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey()}`;
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
 }
 
 function stripFence(raw: string) {
@@ -30,7 +33,7 @@ function retryAfterSeconds(detail: string) {
 async function callGemini(prompt: string, temperature: number): Promise<GeminiCall> {
   const key = geminiKey();
   if (!key) return { text: "", status: 0, detail: "" };
-  const res = await fetch(geminiUrl(), {
+  const res = await fetch(geminiUrl(key), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -61,12 +64,16 @@ Your persona is an objective, helpful, calm, and specific examiner.
 - Be direct, clear, and highly constructive.
 - Do not use fake, polished filler lines (e.g., do not say "This work is a testament to...").
 
-You will be provided with the user's transcript, the duration (in seconds), the word count, and (if applicable) citation check flags (e.g., in_corpus, not_found, elsewhere, unverified).
+You will be provided with the user's transcript, the duration (in seconds), the word count, citation check flags, an optional packed paper excerpt, and optional notes from up to 10 earlier practice talks.
+
+Use the packed paper to know what the subject is. Ground every KEEP, FIX, and SAY in that work AND in what they actually said. If there is no paper, coach only from the speech.
+If earlier-talk notes are present, notice repeating gaps (late question, missing result, thin ending) in one short clause. Do not quote those notes at length. Do not invent talks that are not listed.
 
 CRITICAL RULES REGARDING FACTS AND CITATIONS:
 1. NEVER invent or hallucinate a paper, author, year, or title.
-2. Only quote names exactly as you heard/read them in the transcript.
+2. Only quote names exactly as you heard/read them in the transcript or in the packed paper excerpt.
 3. Citation flags mean ONLY what the check returned. Do not interpret them beyond their literal meaning.
+4. Be specific and useful. Prefer a sentence they can speak next time over vague advice.
 
 EVALUATION LOGIC (Follow this strictly based on the provided time/word count):
 
@@ -77,13 +84,14 @@ SCENARIO A: TOO SHORT (Under 20 seconds OR under 40 words)
 - Output ONLY a "FIX:" section.
 
 SCENARIO B: THIN TALK (Over 20s/40w, but lacks depth or substance)
-- Provide EXACTLY ONE "FIX:".
+- Provide EXACTLY ONE "FIX:" and one "SAY:".
 - Focus on the single most obvious missing piece (e.g., Missing the result, missing who the audience is, or no clear ending).
+- SAY: one sentence they can speak to repair that gap, in their voice, about this subject.
 - Do not invent a second fix just to fill space. Keep it brief and focused.
 
 SCENARIO C: REAL TALK (Sufficient length and fully developed)
 - Focus on the SHAPE of the presentation first (e.g., Was the opening too long? Did the main question come too late? Was the ending thin?).
-- Format your response using "KEEP:" (one thing that worked well regarding structure/delivery) and "FIX:" (how to improve the shape).
+- Format using "KEEP:" (one thing that worked), "FIX:" (how to improve the shape), and "SAY:" (one better spoken sentence for the weakest beat).
 - Address citations ONLY if the user explicitly named a source in the transcript. If they did, use the provided citation flags to calmly note if their sources were verified or not.
 
 Always format your final output cleanly. Remember: Your job is to help them get an A+ by mastering structure and clarity, not by flattering them.`;
@@ -94,13 +102,10 @@ type DebriefInput = {
   seconds: number;
   wordCount: number;
   language: "en" | "am";
+  paper?: string;
+  priorNotes?: string;
 };
 
-export function talkWordCount(transcript: string) {
-  const clean = transcript.trim();
-  if (!clean) return 0;
-  return clean.split(/\s+/).length;
-}
 
 export async function extractCitationAttempts(transcript: string): Promise<string[]> {
   const talk = transcript.trim();
@@ -146,6 +151,12 @@ The talk was spoken in English. Write every sentence of the note in Amharic (Ge'
 Duration: ${Math.max(0, Math.round(input.seconds))} seconds
 Word count: ${input.wordCount}
 
+Packed paper:
+${input.paper?.trim() || "(none)"}
+
+Earlier talks (at most 10; use only as memory of repeating gaps):
+${input.priorNotes?.trim() || "(none)"}
+
 Transcript:
 ${input.transcript.trim() || "(none)"}
 
@@ -178,6 +189,7 @@ export type QuestionInput = {
   hits: QuestionHit[];
   count?: number;
   matchedElsewhere?: boolean;
+  priorNotes?: string;
 };
 
 export type ExaminerTurn = {
@@ -286,13 +298,17 @@ Rules:
 - Never invent a paper, author, or year.
 - You may only name these confirmed titles: ${titles.join("; ") || "(none — do not name a paper)"}.
 - If there are confirmed titles, each question must name at least one of them.
-- If there are none, ask about a claim in the talk: a number, a definition, a cause, or what fails if it is wrong.
+- If there are none, ask about a claim in the talk or the packed paper: a number, a definition, a cause, or what fails if it is wrong.
 - Do not start with "You said". Do not quote a sentence back. Do not mention "the first question".
-- Use words that appear in the talk, such as the subject and the figure, inside a real question.
+- Use words that appear in the talk or packed paper, such as the subject and the figure, inside a real question.
+- If earlier-talk notes exist, press on a gap that has shown up before, without naming those sessions.
 - Respond in ${input.language === "am" ? "Amharic (Ge'ez script)" : "English"}.
 
-Packed abstract:
+Packed paper / abstract:
 ${input.abstract || "(none)"}
+
+Earlier talks (memory, at most 10):
+${input.priorNotes?.trim() || "(none)"}
 
 Talk:
 ${input.transcript || "(none)"}
@@ -311,7 +327,7 @@ JSON only:
     const cleaned = parsed.questions
       .filter((q): q is string => typeof q === "string")
       .map((q) => q.trim())
-      .filter((q) => usableQuestion(q) && groundedQuestion(q, input.hits, input.transcript));
+      .filter((q) => usableQuestion(q) && groundedQuestion(q, input.hits, `${input.transcript} ${input.abstract}`));
     const questions = [...cleaned];
     for (const q of fallback.questions) {
       if (questions.length >= count) break;

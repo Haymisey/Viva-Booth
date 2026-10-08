@@ -1,16 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Menu } from "lucide-react";
 import { DebriefPanel } from "@/components/booth/DebriefPanel";
+import { ExaminerDoor, type ExamTurn } from "@/components/booth/ExaminerDoor";
+import { PaperStrip } from "@/components/booth/PaperStrip";
 import { SessionBar } from "@/components/booth/SessionBar";
-import { Sidebar, type BoothView } from "@/components/booth/Sidebar";
-import { HomeView } from "@/components/booth/HomeView";
-import { TakesView } from "@/components/booth/TakesView";
-import { ManuscriptForm } from "@/components/booth/ManuscriptForm";
-import { SettingsView } from "@/components/booth/SettingsView";
-import { AuthModal, type AuthUser } from "@/components/auth/AuthModal";
-import { PricingModal } from "@/components/billing/PricingModal";
-import { ExaminerChat } from "@/components/chat/ExaminerChat";
 import { startBrowserListen, type MicFailureReason } from "@/lib/browser-listen";
 import {
   capSpeechCitations,
@@ -21,14 +16,35 @@ import {
 import { copyFor, quotaNotice } from "@/lib/copy";
 import { requestDebrief } from "@/lib/request-debrief";
 import { requestExtract } from "@/lib/request-extract";
-import { requestQuestions } from "@/lib/request-questions";
 import { bindVivaSession } from "@/lib/session-bridge";
 import { loadSettings, saveSettings } from "@/lib/settings";
 import { mergeSpeech } from "@/lib/speech-clean";
 import { verifyCitations } from "@/lib/verify-citations";
-import { hushVoxide } from "@/lib/voxide-client";
-import { listSessions, rememberSession, countStatuses, sayLine } from "@/lib/sessions";
-import type { AppLanguage, Citation, Manuscript, SessionPhase } from "@/lib/types";
+import { hushVoxide, releaseVoxide } from "@/lib/voxide-client";
+import { Wordmark } from "@/components/viva/Wordmark";
+import { emptyPaper, type PaperContext } from "@/lib/paper";
+import { countStatuses, sayLine, titleFromTranscript } from "@/lib/sessions";
+import type { AppLanguage, Citation, SessionPhase } from "@/lib/types";
+
+export type LoadedTalk = {
+  id: string;
+  transcript: string;
+  seconds: number;
+  debrief: string;
+  citations: Citation[];
+  paper?: PaperContext | null;
+  messages?: ExamTurn[];
+};
+
+type BoothProps = {
+  signedIn?: boolean;
+  loadedTalk?: LoadedTalk | null;
+  keepTalksLink?: ReactNode;
+  freshNonce?: number;
+  onDetachTalk?: () => void;
+  onOpenMenu?: () => void;
+  onTalkSaved?: (id: string) => void;
+};
 
 const micErrorText = {
   en: copyFor("en").mic,
@@ -40,15 +56,15 @@ const apiErrorText = {
   am: copyFor("am").api,
 };
 
-const initialManuscript: Manuscript = {
-  title: "",
-  question: "",
-  abstract: "",
-  references: ["", "", "", "", ""],
-};
-
-export function Booth() {
-  const [view, setView] = useState<BoothView>("home");
+export function Booth({
+  signedIn = false,
+  loadedTalk = null,
+  keepTalksLink = null,
+  freshNonce = 0,
+  onDetachTalk,
+  onOpenMenu,
+  onTalkSaved,
+}: BoothProps) {
   const [phase, setPhase] = useState<SessionPhase>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [live, setLive] = useState("");
@@ -58,54 +74,47 @@ export function Booth() {
   const [debrief, setDebrief] = useState("");
   const [errorText, setErrorText] = useState("");
   const [language, setLanguage] = useState<AppLanguage>("en");
-  const [manuscript, setManuscript] = useState<Manuscript>(initialManuscript);
-
-  // Authentication & Billing state
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [pricingModalOpen, setPricingModalOpen] = useState(false);
-
-  // Active session and questions state
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [examinerQuestions, setExaminerQuestions] = useState<string[]>([]);
-  const [examinerNote, setExaminerNote] = useState<string | null>(null);
-
+  const [paper, setPaper] = useState<PaperContext>(emptyPaper);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const text = copyFor(language);
-
-  // Fetch current user on mount
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const res = await fetch("/api/auth/me");
-        const data = await res.json();
-        if (data.ok && data.user) {
-          setUser(data.user);
-        }
-      } catch {
-        /* guest mode */
-      }
-    }
-    checkAuth();
-  }, []);
 
   useEffect(() => {
     const settings = loadSettings();
     setLanguage(settings.language);
   }, []);
 
+  useEffect(() => {
+    if (!loadedTalk) return;
+    liveRef.current = loadedTalk.transcript;
+    setLive("");
+    setTranscript(loadedTalk.transcript);
+    setChecked(loadedTalk.citations);
+    setDebrief(loadedTalk.debrief);
+    setElapsed(loadedTalk.seconds);
+    setErrorText("");
+    setPaper(loadedTalk.paper ?? emptyPaper());
+    setSessionId(loadedTalk.id);
+    setPhase("stopped");
+  }, [loadedTalk?.id]);
+
+  useEffect(() => {
+    if (freshNonce === 0) return;
+    liveRef.current = "";
+    setLive("");
+    setTranscript("");
+    setChecked(null);
+    setDebrief("");
+    setElapsed(0);
+    setErrorText("");
+    setPaper(emptyPaper());
+    setSessionId(null);
+    setPhase("idle");
+  }, [freshNonce]);
+
   const chooseLanguage = (next: AppLanguage) => {
     setLanguage(next);
     const current = loadSettings();
     saveSettings({ name: current.name, language: next });
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      setUser(null);
-    } catch (e) {
-      console.error("Logout failed:", e);
-    }
   };
 
   const reportError = useCallback((message: string) => {
@@ -130,9 +139,7 @@ export function Booth() {
     setDebrief("");
     setElapsed(0);
     setErrorText("");
-    setActiveSessionId(null);
-    setExaminerQuestions([]);
-    setExaminerNote(null);
+    setSessionId(null);
   }, []);
 
   const runVerify = useCallback(async (list: Citation[], spokenText: string, seconds: number) => {
@@ -143,12 +150,12 @@ export function Booth() {
     setChecked(verified.citations);
     if (verified.failed) reportError(apiErrorText[language].verify);
 
-    // 1. Request Gemini debrief
     const debriefResult = await requestDebrief({
       transcript: spokenText,
       citations: verified.citations,
       seconds,
       language,
+      paper,
     });
     setDebrief(debriefResult.text);
     if (debriefResult.failed) {
@@ -156,87 +163,39 @@ export function Booth() {
       reportError(notice || apiErrorText[language].debrief);
     }
 
-    // 2. Request examiner questions
-    const qResult = await requestQuestions({
-      language,
-      abstract: manuscript.abstract,
-      transcript: spokenText,
-      citations: verified.citations,
-      count: 2,
-    });
-
-    const questionsList = qResult?.questions || [
-      "How did you address confounding variables in your methodology?",
-      "What are the primary limitations to generalizing these findings?",
-    ];
-    setExaminerQuestions(questionsList);
-    setExaminerNote(qResult?.note || null);
-
-    // 3. Save session to Database & LocalStorage
-    const statuses = countStatuses(verified.citations);
-    const title = manuscript.title.trim() || "Open Defense Talk";
-    const say = sayLine(debriefResult.text);
-
-    // Save to local storage as fallback
-    const localId = `session-${Date.now()}`;
-    rememberSession({
-      id: localId,
-      packId: "open",
-      title,
-      mode: manuscript.abstract ? "prepared" : "open",
-      take: 1,
-      at: new Date().toISOString(),
-      seconds,
-      transcript: spokenText,
-      inCorpus: statuses.inCorpus,
-      notFound: statuses.notFound,
-      unverified: statuses.unverified,
-      say,
-      questions: questionsList,
-      questionNote: qResult?.note || null,
-      debrief: debriefResult.text,
-      citations: verified.citations,
-    });
-
-    // Save to backend database if logged in
-    try {
-      const dbRes = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          mode: manuscript.abstract ? "prepared" : "open",
-          seconds,
-          transcript: spokenText,
-          inCorpus: statuses.inCorpus,
-          notFound: statuses.notFound,
-          unverified: statuses.unverified,
-          say,
-          debrief: debriefResult.text,
-          questionNote: qResult?.note,
-          questions: questionsList,
-          citations: verified.citations,
-        }),
-      });
-
-      const dbData = await dbRes.json();
-      if (dbData.ok && dbData.session) {
-        setActiveSessionId(dbData.session.id);
-        // Refresh user credits
-        if (user && user.plan === "free" && user.credits > 0) {
-          setUser({ ...user, credits: Math.max(0, user.credits - 1) });
+    if (signedIn && spokenText) {
+      const counts = countStatuses(verified.citations);
+      try {
+        const res = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: titleFromTranscript(spokenText),
+            mode: "open",
+            seconds,
+            transcript: spokenText,
+            inCorpus: counts.inCorpus,
+            notFound: counts.notFound,
+            unverified: counts.unverified,
+            say: sayLine(debriefResult.text),
+            debrief: debriefResult.text,
+            citations: verified.citations,
+            paper,
+          }),
+        });
+        const json = await res.json();
+        if (json.ok && json.session?.id) {
+          setSessionId(json.session.id);
+          onTalkSaved?.(json.session.id);
         }
-      } else if (dbData.needsUpgrade) {
-        setPricingModalOpen(true);
-      } else {
-        setActiveSessionId(localId);
+      } catch {
+        /* keep the debrief even if history fails */
       }
-    } catch {
-      setActiveSessionId(localId);
     }
-  }, [language, manuscript.abstract, manuscript.title, reportError, user]);
+  }, [language, onTalkSaved, paper, reportError, signedIn]);
 
   const finalizeStop = useCallback(() => {
+    releaseVoxide();
     const spokenText = liveRef.current.trim();
     const seconds = elapsed;
     setTranscript(spokenText);
@@ -318,168 +277,79 @@ export function Booth() {
   const shownTranscript = phase === "talking" ? live : transcript;
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper md:flex-row">
-      {/* Sidebar Navigation & Account Info */}
-      <Sidebar
-        view={view}
-        onChange={setView}
-        user={user}
-        onOpenAuth={() => setAuthModalOpen(true)}
-        onLogout={handleLogout}
-        onOpenUpgrade={() => setPricingModalOpen(true)}
-      />
-
-      {/* Main Content Area */}
-      <main className="flex-1 px-6 py-8 md:px-12 md:py-10 max-w-5xl">
-        {/* Top bar with language switcher */}
-        <div className="flex items-center justify-between pb-6 mb-6 border-b border-rule/60">
-          <div className="text-xs uppercase tracking-wider text-ink/50 font-medium">
-            {view === "home"
-              ? "Home Overview"
-              : view === "practice"
-              ? "Speaking Practice Booth"
-              : view === "takes"
-              ? "Defense History & Q&A"
-              : view === "manuscripts"
-              ? "Manuscript Preparation"
-              : "Account Settings"}
-          </div>
-
-          <div className="flex items-center gap-4">
-            {!user ? (
-              <button
-                type="button"
-                onClick={() => setAuthModalOpen(true)}
-                className="text-xs font-medium text-ink underline underline-offset-4 hover:opacity-80"
-              >
-                Sign in
-              </button>
-            ) : null}
-
+    <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-8 md:px-12 md:py-10">
+      <header className="flex items-end justify-between gap-6 border-b border-rule pb-8">
+        <div className="flex items-center gap-2">
+          {onOpenMenu ? (
+            <button
+              type="button"
+              className="booth-menu"
+              aria-label={language === "am" ? "ንግግሮች ክፈት" : "Open talks"}
+              onClick={onOpenMenu}
+            >
+              <Menu size={22} strokeWidth={1.75} />
+            </button>
+          ) : null}
+          <h1 className="leading-none">
+            <Wordmark className="wordmark" />
+          </h1>
+        </div>
+        <div className="mb-2 flex shrink-0 items-center gap-4">
+          {keepTalksLink}
+          <label>
+            <span className="sr-only">{language === "am" ? "ቋንቋ" : "Language"}</span>
             <select
               value={language}
-              onChange={(e) => chooseLanguage(e.target.value === "am" ? "am" : "en")}
-              className="rounded-full border border-rule bg-card px-3 py-1.5 text-xs text-ink outline-none"
+              onChange={(event) => chooseLanguage(event.target.value === "am" ? "am" : "en")}
+              className="rounded-full border border-ink/20 bg-transparent px-3 py-2 text-sm text-ink outline-none"
             >
               <option value="en">English</option>
               <option value="am">አማርኛ</option>
             </select>
-          </div>
+          </label>
         </div>
+      </header>
 
-        {/* 1. Home View */}
-        {view === "home" ? (
-          <HomeView
-            name={user ? user.name : ""}
-            sessions={listSessions()}
-            onTalk={() => {
-              setView("practice");
-              resetSession();
-              setPhase("talking");
-              hushVoxide();
-            }}
-            onManuscript={() => setView("manuscripts")}
-            onOpenTakes={() => setView("takes")}
-            onResume={() => setView("practice")}
-          />
+      <div className="flex flex-col gap-16 pt-6 md:pt-8">
+        <SessionBar
+          phase={phase}
+          elapsedSeconds={elapsed}
+          startLabel={text.start}
+          stopLabel={text.stop}
+          extra={
+            <PaperStrip paper={paper} language={language} disabled={phase === "talking"} onChange={setPaper} />
+          }
+          onStart={() => {
+            onDetachTalk?.();
+            resetSession();
+            setPhase("talking");
+            hushVoxide();
+          }}
+          onStop={finalizeStop}
+        />
+
+        {errorText ? (
+          <p role="alert" className="rounded-xl border border-rust/30 bg-rust/5 px-5 py-3 text-[15px] leading-relaxed text-rust">
+            {errorText}
+          </p>
         ) : null}
 
-        {/* 2. Practice Booth View */}
-        {view === "practice" ? (
-          <div className="flex flex-col gap-10">
-            <SessionBar
-              phase={phase}
-              elapsedSeconds={elapsed}
-              startLabel={text.start}
-              stopLabel={text.stop}
-              onStart={() => {
-                resetSession();
-                setPhase("talking");
-                hushVoxide();
-              }}
-              onStop={finalizeStop}
-            />
+        <DebriefPanel transcript={shownTranscript} citations={checked ?? []} debrief={debrief} language={language} />
 
-            {errorText ? (
-              <p
-                role="alert"
-                className="rounded-xl border border-rust/30 bg-rust/5 px-5 py-3 text-[15px] leading-relaxed text-rust"
-              >
-                {errorText}
-              </p>
-            ) : null}
-
-            <DebriefPanel
-              transcript={shownTranscript}
-              citations={checked ?? []}
-              debrief={debrief}
-              language={language}
-            />
-
-            {/* Interactive Examiner Chat once practice has finished */}
-            {phase === "stopped" && activeSessionId ? (
-              <div className="mt-4 pt-6 border-t border-rule">
-                <ExaminerChat
-                  sessionId={activeSessionId}
-                  sessionTitle={manuscript.title.trim() || "Open Defense Talk"}
-                  initialQuestions={examinerQuestions}
-                  onRequireAuth={() => setAuthModalOpen(true)}
-                />
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/* 3. Takes & Chat History View */}
-        {view === "takes" ? (
-          <TakesView
-            user={user}
-            onRequireAuth={() => setAuthModalOpen(true)}
-            onOpenUpgrade={() => setPricingModalOpen(true)}
-          />
-        ) : null}
-
-        {/* 4. Manuscripts View */}
-        {view === "manuscripts" ? (
-          <div className="flex flex-col gap-8">
-            <ManuscriptForm
-              value={manuscript}
-              onChange={setManuscript}
-              onPrepare={() => setView("practice")}
-              onOpenTalk={() => setView("practice")}
-              disabled={phase === "talking"}
-            />
-          </div>
-        ) : null}
-
-        {/* 5. Settings View */}
-        {view === "settings" ? (
-          <SettingsView
-            name={user ? user.name : ""}
-            language={language}
-            onName={(val) => {
-              if (user) setUser({ ...user, name: val });
-            }}
-            onLanguage={chooseLanguage}
-          />
-        ) : null}
-      </main>
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        onSuccess={(loggedUser) => setUser(loggedUser)}
-      />
-
-      {/* Pricing / Payments Modal */}
-      <PricingModal
-        isOpen={pricingModalOpen}
-        onClose={() => setPricingModalOpen(false)}
-        user={user}
-        onPlanUpdated={(updatedUser) => setUser(updatedUser)}
-        onRequireAuth={() => setAuthModalOpen(true)}
-      />
+        <ExaminerDoor
+          language={language}
+          phaseTalking={phase === "talking"}
+          stopped={phase === "stopped"}
+          debrief={debrief}
+          transcript={transcript}
+          seconds={elapsed}
+          citations={checked ?? []}
+          paper={paper}
+          sessionId={sessionId}
+          loadedTalkId={loadedTalk?.id ?? null}
+          initialTurns={loadedTalk?.messages ?? []}
+        />
+      </div>
     </div>
   );
 }

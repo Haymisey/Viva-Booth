@@ -15,6 +15,18 @@ export function hushVoxide() {
   }
 }
 
+export function releaseVoxide() {
+  try {
+    client?.interrupt();
+    client?.disconnect();
+  } catch {
+    /* no session */
+  }
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+}
+
 export function ensureVoxideClient(publicKey: string) {
   if (client) return client;
   const ai = new VoxideClient({
@@ -34,7 +46,11 @@ export function ensureVoxideClient(publicKey: string) {
     stopPractice: {
       description:
         "Stop the viva practice timer only. Do not summarize the talk. One short word is enough.",
-      handler: async () => vivaStop(),
+      handler: async () => {
+        const result = vivaStop();
+        queueMicrotask(() => releaseVoxide());
+        return result;
+      },
     },
   });
   ai.bindState(() => vivaSnapshot());

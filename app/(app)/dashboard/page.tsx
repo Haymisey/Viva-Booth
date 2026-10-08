@@ -23,7 +23,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link href="/legacy-booth">
+          <Link href="/practice">
             <Button className="gap-2 shadow-lg shadow-primary/20">
               <Sparkles className="size-4" />
               <span>Open Viva Booth</span>
@@ -43,7 +43,7 @@ export default async function DashboardPage() {
             Practice mock questions with simulated committee examiners in English or Amharic.
           </p>
           <div className="pt-2">
-            <Link href="/legacy-booth">
+            <Link href="/practice">
               <Button variant="outline" size="sm" className="w-full">
                 Practice Now
               </Button>

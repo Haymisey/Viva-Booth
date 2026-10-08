@@ -2,8 +2,24 @@
 
 Team log of what shipped, broke, or got cut. Mirror important entries to STARK Changelogs.
 
+## 2026-10-09
+
+- Practice history is a ChatGPT-style rail, not a last-session-only save and not a Figma canvas. Signed-in talks persist in the database. New practice, search, open a talk, delete a talk. On a phone the rail is hidden; a menu next to Viva. opens the same list.
+- Phase 3 canvas / five-reference project dashboard is cut. History is enough.
+- Add paper sits under Start/Stop as one serif link. A PDF (10 MB / 20 pages) or a pasted excerpt is optional. The coach and examiner see that excerpt plus the talk. Signed-in debriefs also see notes from the last 10 talks.
+- After a real Stop, Ask me questions is a second door. Too short (under 20s or 40 words) stays closed. One question at a time; Gemini is not replaced with canned lines.
+- Settings (paper page): name, password change (other sessions revoked), optional Gemini BYOK encrypted at rest. GitHub login is gone. After sign-in, the app opens `/practice`.
+- Landing and booth stay cream paper (Instrument Serif, Manrope). The dark AppShell is leftover, not the product.
+- Debrief 500: last-10 notes were `await`ed inside a non-async Gemini callback. Fetch them first, then generate. Same pattern on session chat.
+- Examiner answers can be typed or spoken (Speak). “Listening…” was the Gemini wait label; that button now says it is waiting. Student turns are marked **You** in the page font. Examiner turns have no extra heading.
+- Voxide stays mounted for Start/Stop, but the orange mic disconnects on Stop, Ask me questions, Speak, and Answer so it does not talk over the exam.
+- Paper attach no longer leaks the browser “No file chosen” control.
+- Long Transcript, Citations, Say it like this, and the examiner thread cap and scroll. The Windows scrollbar (arrows and all) is hidden; a thin pill shows only while that column is moving. At the top or bottom of a column, the next wheel continues the page.
+- `/demo` is a scroll-driven film of the booth for a YouTube screen recording. It is not the live practice page.
+
 ## 2026-10-01
 
+- The front door is the paper landing (Instrument Serif, Manrope). Sign in and Get started stay on the existing accounts. Begin your practice opens `/practice`, the one-page booth, without the dark shell.
 - The booth is one page: wordmark, clock, then Transcript, Citations, and Say it like this. No sidebar, no manuscript gate, no examiner card, no tagline on the right. Newsreader is the page font. Voxide stays mounted. Start and Stop still run the browser mic. English or Amharic sits in the header. Amharic changes the page labels and the examiner note. The microphone still listens in English.
 - The right column is Gemini’s note from the examiner prompt (duration, word count, transcript, citation flags). A short talk is only a fix. The canned Keep / two Fixes / Say stand-in is gone. If the free-tier limit answers 429, the debrief waits for Gemini’s retry time once, then says the free limit is full.
 
