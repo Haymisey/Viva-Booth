@@ -1,5 +1,5 @@
 services:
-  # ─── PostgreSQL Database ───
+  # ─── PostgreSQL Database Service ───
   db:
     image: postgres:16-alpine
     container_name: vivabooth-db
@@ -18,27 +18,11 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─── Prisma Schema Migration (One-shot) ───
-  migration:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: builder
-    container_name: vivabooth-migration
-    command: npx prisma db push --skip-generate
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-vivabooth}?schema=public
-      DIRECT_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-vivabooth}?schema=public
-    depends_on:
-      db:
-        condition: service_healthy
-
-  # ─── Full-Stack Next.js App (Frontend + Backend API) ───
+  # ─── Full-Stack Next.js App (Frontend + Backend API + Auto-Migration) ───
   app:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runner
     container_name: vivabooth-app
     restart: unless-stopped
     ports:
@@ -61,8 +45,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      migration:
-        condition: service_completed_successfully
 
 volumes:
   postgres_data:

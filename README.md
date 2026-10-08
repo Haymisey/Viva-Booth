@@ -54,6 +54,33 @@ Copy the same keys from `.env.example` into the EthioDeploy env panel (`NEXT_PUB
 
 If the dashboard still health-checks `/` in the first second, point it at `/api/health` or temporarily disable the check so the first container can stay up.
 
+## Deploy with Docker
+
+### Option 1: Full-Stack Docker Compose (Recommended for VPS / Servers)
+Runs PostgreSQL and the full-stack Next.js app with automatic schema synchronization:
+
+```bash
+# Start database and app
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
+```
+
+### Option 2: Self-Contained Single Container (EthioDeploy / PaaS)
+The `Dockerfile` includes an embedded PostgreSQL engine that automatically boots and synchronizes the Prisma schema on container startup if no external database is configured:
+
+```bash
+# Build and run with persisted volume
+docker build -t vivabooth .
+docker run -d -p 3000:3000 -v vivabooth_data:/var/lib/postgresql/data vivabooth
+```
+
+If connecting to an external PostgreSQL database (e.g. Supabase), simply pass `DATABASE_URL`:
+```bash
+docker run -d -p 3000:3000 -e DATABASE_URL="postgresql://user:pass@host:5432/db" vivabooth
+```
+
 ## Claim a feature
 
 Board: [`feature_lock.json`](feature_lock.json). Statuses: `unclaimed` | `claimed` | `released`.
