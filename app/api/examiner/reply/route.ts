@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { generateExaminerReply } from "@/lib/examiner-chat";
 import { parsePaperJson, type PaperContext } from "@/lib/paper";
 import { recentCoachNotes } from "@/lib/session-memory";
+import { withUserGemini } from "@/lib/server/keys";
 import { talkIsReady, talkWordCount } from "@/lib/talk-ready";
 
 export const runtime = "nodejs";
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     const priorNotes = await recentCoachNotes(user?.id);
-    const text = await generateExaminerReply({
+    const text = await withUserGemini(() => generateExaminerReply({
       sessionTitle: paper?.title || "Open defense talk",
       transcript,
       history,
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
       priorNotes,
       language: body.language === "am" ? "am" : "en",
       wordCount: talkWordCount(transcript),
-    });
+    }));
     if (!text) {
       return NextResponse.json({ error: "Examiner failed" }, { status: 502 });
     }

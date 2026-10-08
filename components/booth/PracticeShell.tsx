@@ -140,6 +140,15 @@ export function PracticeShell() {
     router.replace(`/practice?s=${id}`);
   };
 
+  const deleteTalk = async (id: string) => {
+    if (!window.confirm("Delete this talk? That cannot be undone.")) return;
+    const res = await fetch(`/api/sessions/${id}`, { method: "DELETE" });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.ok) return;
+    await refreshTalks();
+    if (activeId === id) openNew();
+  };
+
   return (
     <div className="practice-shell">
       {user && !collapsed ? (
@@ -158,6 +167,7 @@ export function PracticeShell() {
           activeId={activeId}
           onNew={openNew}
           onSelect={openTalk}
+          onDelete={(id) => void deleteTalk(id)}
           userName={profile?.name || user.name}
           userEmail={profile?.email || user.email}
           onSignOut={async () => {

@@ -1,4 +1,5 @@
 import { significantTokens } from "./citation-match";
+import { activeGeminiKey } from "./gemini-key";
 
 export { talkIsReady, talkWordCount } from "./talk-ready";
 
@@ -7,12 +8,12 @@ type GeminiJson = {
 };
 
 function geminiKey() {
-  return process.env.GEMINI_API_KEY?.trim().replace(/^["']|["']$/g, "") ?? "";
+  return activeGeminiKey();
 }
 
-function geminiUrl() {
+function geminiUrl(key: string) {
   const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
-  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey()}`;
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
 }
 
 function stripFence(raw: string) {
@@ -32,7 +33,7 @@ function retryAfterSeconds(detail: string) {
 async function callGemini(prompt: string, temperature: number): Promise<GeminiCall> {
   const key = geminiKey();
   if (!key) return { text: "", status: 0, detail: "" };
-  const res = await fetch(geminiUrl(), {
+  const res = await fetch(geminiUrl(key), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

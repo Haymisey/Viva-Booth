@@ -1,3 +1,4 @@
+import { activeGeminiKey } from "./gemini-key";
 import type { PaperContext } from "./paper";
 import { formatPaperForPrompt } from "./paper";
 
@@ -29,7 +30,7 @@ function retryAfterSeconds(detail: string) {
 }
 
 export async function generateExaminerReply(input: EvaluateChatInput): Promise<string> {
-  const geminiKey = process.env.GEMINI_API_KEY?.trim().replace(/^["']|["']$/g, "");
+  const geminiKey = activeGeminiKey();
   const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
   if (!geminiKey) return "";
 

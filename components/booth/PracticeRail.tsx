@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { LogOut, PanelLeft, PanelLeftClose, Search, Settings, SquarePen } from "lucide-react";
+import { LogOut, PanelLeft, PanelLeftClose, Search, Settings, SquarePen, Trash2 } from "lucide-react";
 import { Wordmark } from "@/components/viva/Wordmark";
 
 export type TalkSummary = {
@@ -19,6 +19,7 @@ type Props = {
   activeId: string | null;
   onNew: () => void;
   onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
   userName?: string;
   userEmail?: string;
   onSignOut: () => void;
@@ -48,6 +49,7 @@ export function PracticeRail({
   activeId,
   onNew,
   onSelect,
+  onDelete,
   userName,
   userEmail,
   onSignOut,
@@ -130,15 +132,23 @@ export function PracticeRail({
             <p className="practice-rail-empty">{talks.length === 0 ? "Talks you finish will live here." : "No talks match that search."}</p>
           ) : (
             visible.map((talk) => (
-              <button
-                key={talk.id}
-                type="button"
-                className={`practice-talk ${talk.id === activeId ? "active" : ""}`}
-                onClick={() => onSelect(talk.id)}
-              >
-                {talk.title}
-                <span className="practice-talk-meta">{formatWhen(talk.createdAt)}</span>
-              </button>
+              <div key={talk.id} className={`practice-talk-row ${talk.id === activeId ? "active" : ""}`}>
+                <button type="button" className="practice-talk" onClick={() => onSelect(talk.id)}>
+                  {talk.title}
+                  <span className="practice-talk-meta">{formatWhen(talk.createdAt)}</span>
+                </button>
+                <button
+                  type="button"
+                  className="practice-talk-delete"
+                  aria-label={`Delete ${talk.title}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDelete(talk.id);
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             ))
           )}
         </div>

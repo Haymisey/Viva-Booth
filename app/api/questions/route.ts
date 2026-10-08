@@ -4,6 +4,7 @@ import { generateExaminerQuestions } from "@/lib/gemini";
 import { talkIsReady } from "@/lib/talk-ready";
 import { formatPaperForPrompt, parsePaperJson } from "@/lib/paper";
 import { recentCoachNotes } from "@/lib/session-memory";
+import { withUserGemini } from "@/lib/server/keys";
 
 export const runtime = "nodejs";
 
@@ -35,15 +36,18 @@ export async function POST(request: Request) {
     const user = await getSessionUser().catch(() => null);
     const paper = formatPaperForPrompt(parsePaperJson(body.paper));
     const abstract = [paper !== "(none)" ? paper : "", body.abstract ?? ""].filter(Boolean).join("\n\n");
-    const turn = await generateExaminerQuestions({
-      language: body.language === "am" ? "am" : "en",
-      abstract,
-      transcript,
-      count: body.count === 1 ? 1 : body.count === 2 ? 2 : 4,
-      matchedElsewhere: body.matchedElsewhere === true,
-      hits,
-      priorNotes: await recentCoachNotes(user?.id),
-    });
+    const priorNotes = await recentCoachNotes(user?.id);
+    const turn = await withUserGemini(() =>
+      generateExaminerQuestions({
+        language: body.language === "am" ? "am" : "en",
+        abstract,
+        transcript,
+        count: body.count === 1 ? 1 : body.count === 2 ? 2 : 4,
+        matchedElsewhere: body.matchedElsewhere === true,
+        hits,
+        priorNotes,
+      }),
+    );
     return NextResponse.json(turn);
   } catch {
     return NextResponse.json({ error: "Questions failed" }, { status: 500 });

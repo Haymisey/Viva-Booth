@@ -54,7 +54,8 @@ export async function POST(
     const { parsePaperJson } = await import("@/lib/paper");
     const { recentCoachNotes } = await import("@/lib/session-memory");
     const { talkWordCount } = await import("@/lib/gemini");
-    const examinerReplyText = await generateExaminerReply({
+    const { withUserGemini } = await import("@/lib/server/keys");
+    const examinerReplyText = await withUserGemini(() => generateExaminerReply({
       sessionTitle: session.title,
       transcript: session.transcript,
       history,
@@ -62,7 +63,7 @@ export async function POST(
       paper: parsePaperJson(session.paperJson),
       priorNotes: await recentCoachNotes(user.id),
       wordCount: talkWordCount(session.transcript),
-    });
+    }));
     if (!examinerReplyText) {
       return NextResponse.json({ ok: false, error: "Examiner failed" }, { status: 502 });
     }

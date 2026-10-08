@@ -218,6 +218,44 @@
   justify-content: center;
 }
 
+.haven .settings-block {
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+
+.haven .settings-kicker {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.haven .settings-help {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.haven .settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.haven .settings-clear {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 16px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 0;
+}
+
 .haven .auth-label-row {
   display: flex;
   justify-content: space-between;
@@ -853,7 +891,7 @@
 
 .practice-icon-btn:hover,
 .practice-new:hover,
-.practice-talk:hover,
+.practice-talk-row:hover,
 .practice-account-btn:hover,
 .practice-account-item:hover {
   background: color-mix(in oklab, var(--foreground) 6%, transparent);
@@ -913,9 +951,20 @@
   line-height: 1.5;
 }
 
+.practice-talk-row {
+  display: flex;
+  align-items: stretch;
+  border-radius: 10px;
+}
+
+.practice-talk-row.active {
+  background: color-mix(in oklab, var(--rose) 12%, white);
+}
+
 .practice-talk {
   display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   border: 0;
   border-radius: 10px;
   background: transparent;
@@ -927,8 +976,21 @@
   line-height: 1.35;
 }
 
-.practice-talk.active {
-  background: color-mix(in oklab, var(--rose) 12%, white);
+.practice-talk-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: color-mix(in oklab, var(--foreground) 45%, transparent);
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.practice-talk-delete:hover {
+  color: var(--ink);
 }
 
 .practice-talk-meta {

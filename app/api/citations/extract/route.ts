@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { claimGroundedInTranscript } from "@/lib/citation-match";
 import { extractCitationAttempts } from "@/lib/gemini";
+import { withUserGemini } from "@/lib/server/keys";
 
 export const runtime = "nodejs";
 
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
     if (!transcript.trim()) {
       return NextResponse.json({ queries: [] });
     }
-    const raw = await extractCitationAttempts(transcript);
+    const raw = await withUserGemini(() => extractCitationAttempts(transcript));
     const queries = raw.filter((claim) => claimGroundedInTranscript(claim, transcript));
     return NextResponse.json({ queries: queries.slice(0, 8) });
   } catch {
