@@ -89,6 +89,7 @@
   --sidebar-ring: oklch(0.708 0 0);
 
   /* Legacy design tokens */
+  --font-display: var(--font-instrument), Georgia, "Times New Roman", serif;
   --ink: #1a1612;
   --paper: #f7f2ea;
   --rule: #ddd4c6;
@@ -140,4 +141,9 @@
   html {
     @apply font-sans;
   }
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 400;
 }

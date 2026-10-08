@@ -1,0 +1,802 @@
+.haven {
+  --background: oklch(0.985 0.003 80);
+  --foreground: oklch(0.25 0.012 65);
+  --card: oklch(1 0 0);
+  --primary: oklch(0.29 0.019 60);
+  --primary-foreground: oklch(0.99 0.002 70);
+  --muted-foreground: oklch(0.53 0.014 65);
+  --border: oklch(0.89 0.009 70);
+  --rose: oklch(0.65 0.084 34);
+  --rose-light: oklch(0.95 0.023 34);
+  --sage: oklch(0.49 0.05 145);
+  --sage-light: oklch(0.95 0.015 145);
+  --shadow-paper: 0 18px 65px oklch(0.3 0.02 55 / 0.055), 0 2px 7px oklch(0.3 0.02 55 / 0.025);
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), var(--font-ethiopic), sans-serif;
+}
+
+.haven h1,
+.haven h2,
+.haven h3,
+.haven p {
+  margin: 0;
+}
+
+.haven ::selection {
+  background: var(--rose-light);
+}
+
+.haven .viva-button {
+  display: inline-flex;
+  align-items: center;
+  height: 43px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 21px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  gap: 15px;
+  text-decoration: none;
+  box-shadow: 0 3px 5px oklch(0.2 0 0 / 0.06);
+  transition: transform 0.25s, background 0.25s, box-shadow 0.25s;
+  cursor: pointer;
+}
+
+.haven .viva-button:hover {
+  background: var(--foreground);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 13px oklch(0.2 0 0 / 0.12);
+}
+
+.haven .quiet-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.haven .site-header {
+  height: 100px;
+  max-width: 1440px;
+  padding: 0 6%;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+
+.haven .wordmark {
+  font-family: var(--font-instrument), Georgia, serif;
+  font-size: 43px;
+  line-height: 1;
+  text-decoration: none;
+  color: inherit;
+}
+
+.haven .brand-period {
+  color: var(--rose);
+}
+
+.haven .header-note {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-left: 70px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.haven .site-header nav {
+  display: flex;
+  gap: 17px;
+  align-items: center;
+}
+
+.haven .hero {
+  position: relative;
+  text-align: center;
+  isolation: isolate;
+  padding: 66px 24px 80px;
+  min-height: 648px;
+}
+
+.haven .hero-art {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  z-index: -1;
+  opacity: 0.85;
+  animation: haven-art 1.8s ease both;
+}
+
+.haven .auth-page {
+  min-height: 100vh;
+  position: relative;
+  isolation: isolate;
+}
+
+.haven .auth-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+  z-index: -1;
+}
+
+.haven .auth-main {
+  max-width: 390px;
+  margin: 52px auto 70px;
+  padding: 0 24px;
+}
+
+.haven .auth-heading {
+  text-align: center;
+  margin-bottom: 29px;
+}
+
+.haven .auth-heading h1 {
+  font-family: var(--font-instrument), Georgia, serif;
+  font-size: 51px;
+  font-weight: 400;
+  margin: 10px 0;
+}
+
+.haven .auth-heading p {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.8;
+}
+
+.haven .auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+
+.haven .auth-form label {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+
+.haven .auth-form input {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  height: 46px;
+  padding: 0 13px;
+  font-size: 12px;
+  outline: none;
+  color: var(--foreground);
+}
+
+.haven .auth-form input:focus {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px var(--rose-light);
+}
+
+.haven .password-input {
+  position: relative;
+}
+
+.haven .password-input input {
+  padding-right: 45px;
+}
+
+.haven .password-input > button {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  color: var(--muted-foreground);
+  height: 36px;
+  width: 36px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.haven .auth-form .viva-button {
+  width: 100%;
+  height: 46px;
+  margin-top: 2px;
+  justify-content: center;
+}
+
+.haven .auth-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.haven .auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted-foreground);
+  font-size: 9px;
+  margin: 21px 0;
+}
+
+.haven .auth-divider::before,
+.haven .auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+}
+
+.haven .google-button {
+  width: 100%;
+  height: 45px;
+  font-size: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--foreground);
+}
+
+.haven .google-mark {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.haven .auth-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 22px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.haven .auth-switch a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 11px;
+}
+
+.haven .auth-message {
+  font-size: 12px;
+  line-height: 1.8;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--sage-light);
+  color: var(--sage);
+  margin-bottom: 19px;
+}
+
+.haven .auth-message.error {
+  background: var(--rose-light);
+  color: var(--destructive);
+}
+
+.haven .auth-note {
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 9px;
+  margin-top: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.haven .status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--sage);
+  border-radius: 50%;
+}
+
+.haven .hero h1 {
+  font-family: var(--font-instrument), Georgia, serif;
+  font-weight: 400;
+  font-size: 108px;
+  line-height: 1.12;
+  margin-top: 18px;
+}
+
+.haven .hero h1 em {
+  color: var(--rose);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.haven .hero-description {
+  margin-top: 19px;
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--muted-foreground);
+}
+
+.haven .hero-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 17px;
+  margin-top: 29px;
+}
+
+.haven .hero-actions .viva-button {
+  height: 47px;
+  padding: 0 24px;
+}
+
+.haven .hero-footnote {
+  margin-top: 18px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+.haven .hero-footnote span {
+  margin: 0 7px;
+  color: var(--rose);
+}
+
+.haven .hero-bottom {
+  margin: 54px auto 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 27px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+.haven .hero-bottom span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.haven .hero-bottom > i {
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+}
+
+.haven .experience {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 36px 32px 66px;
+}
+
+.haven .section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 27px;
+}
+
+.haven .eyebrow {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 1.7px;
+  color: var(--muted-foreground);
+}
+
+.haven .section-heading h2 {
+  font-family: var(--font-instrument), Georgia, serif;
+  font-size: 32px;
+  font-weight: 400;
+  margin-top: 7px;
+}
+
+.haven .section-heading > p {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.8;
+  text-align: right;
+}
+
+.haven .practice-preview {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-paper);
+  overflow: hidden;
+  scroll-margin-top: 25px;
+}
+
+.haven .preview-top {
+  padding: 17px 25px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+.haven .sample-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.haven .preview-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 31px 38px 25px;
+  align-items: center;
+}
+
+.haven .preview-intro h3 {
+  font-family: var(--font-instrument), Georgia, serif;
+  font-size: 31px;
+  font-weight: 400;
+  max-width: 290px;
+  line-height: 1.2;
+  margin-top: 10px;
+}
+
+.haven .preview-intro > p {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  line-height: 1.8;
+  margin-top: 13px;
+}
+
+.haven .sample-switch {
+  display: flex;
+  margin-top: 10px;
+  gap: 1px;
+}
+
+.haven .sample-dot {
+  width: 22px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.haven .sample-dot span {
+  width: 5px;
+  height: 5px;
+  background: var(--border);
+  border-radius: 50%;
+  transition: background 0.2s, width 0.2s;
+}
+
+.haven .sample-dot.active span {
+  background: var(--rose);
+  width: 14px;
+  border-radius: 3px;
+}
+
+.haven .preview-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.haven .timer-numerals {
+  font-family: var(--font-instrument), Georgia, serif;
+  font-size: 88px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.haven .timer-numerals > span {
+  color: var(--rose);
+}
+
+.haven .timer-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.haven .timer-controls .viva-button {
+  height: 32px;
+  font-size: 10px;
+  padding: 0 15px;
+  gap: 7px;
+}
+
+.haven .timer-controls svg {
+  width: 12px;
+  height: 12px;
+}
+
+.haven .sound-wave {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  gap: 3px;
+  margin-top: 15px;
+}
+
+.haven .sound-wave i {
+  height: 5px;
+  width: 2px;
+  background: var(--rose);
+  opacity: 0.5;
+  border-radius: 2px;
+}
+
+.haven .sound-wave i:nth-child(3n) {
+  height: 11px;
+}
+
+.haven .sound-wave i:nth-child(4n) {
+  height: 19px;
+}
+
+.haven .sound-wave i:nth-child(5n) {
+  height: 25px;
+}
+
+.haven .sound-wave.playing i {
+  animation: haven-wave 0.8s ease-in-out infinite alternate;
+}
+
+.haven .sound-wave.playing i:nth-child(2n) {
+  animation-delay: -0.4s;
+}
+
+.haven .sound-wave.playing i:nth-child(3n) {
+  animation-delay: -0.2s;
+}
+
+.haven .preview-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  margin: 0 38px 31px;
+  padding-top: 23px;
+  border-top: 1px solid var(--border);
+}
+
+.haven .preview-columns section {
+  padding: 0 24px;
+  border-left: 1px solid var(--border);
+}
+
+.haven .preview-columns section:first-child {
+  border-left: none;
+  padding-left: 0;
+}
+
+.haven .preview-columns section:last-child {
+  padding-right: 0;
+}
+
+.haven .column-label {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.haven .column-label svg {
+  color: var(--muted-foreground);
+}
+
+.haven .tiny-spark {
+  font-size: 18px;
+  color: var(--rose);
+}
+
+.haven .preview-columns p {
+  font-size: 10px;
+  line-height: 1.9;
+  color: var(--muted-foreground);
+  margin-top: 13px;
+}
+
+.haven .sample-copy {
+  animation: haven-fade 0.5s ease both;
+}
+
+.haven .citation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--sage);
+  background: var(--sage-light);
+  padding: 4px 7px;
+  border-radius: 4px;
+  margin-top: 10px;
+  font-size: 8px;
+}
+
+.haven .principles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 44px;
+  padding: 47px 0 0;
+}
+
+.haven .principle-number {
+  font-family: var(--font-instrument), Georgia, serif;
+  color: var(--rose);
+  font-size: 18px;
+}
+
+.haven .principles h3 {
+  font-family: var(--font-instrument), Georgia, serif;
+  font-size: 25px;
+  font-weight: 400;
+  margin-top: 9px;
+}
+
+.haven .principles p {
+  margin-top: 10px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.9;
+  max-width: 270px;
+}
+
+.haven .closing {
+  text-align: center;
+  border-top: 1px solid var(--border);
+  padding: 54px 24px;
+}
+
+.haven .closing h2 {
+  font-family: var(--font-instrument), Georgia, serif;
+  font-size: 39px;
+  font-weight: 400;
+}
+
+.haven .closing p {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 11px 0 23px;
+}
+
+.haven .site-footer {
+  margin: 0 6%;
+  padding: 24px 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.haven .site-footer .wordmark {
+  font-size: 28px;
+}
+
+.haven .site-footer p {
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.haven .reveal {
+  animation: haven-arrive 0.9s ease both;
+}
+
+.haven .reveal.delay-one {
+  animation-delay: 0.12s;
+}
+
+.haven .reveal.delay-two {
+  animation-delay: 0.24s;
+}
+
+@keyframes haven-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes haven-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes haven-art {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 0.85;
+    transform: translateY(0);
+  }
+}
+
+@keyframes haven-wave {
+  from {
+    transform: scaleY(0.55);
+  }
+  to {
+    transform: scaleY(1.2);
+  }
+}
+
+@media (max-width: 700px) {
+  .haven .site-header {
+    height: 83px;
+    padding: 0 22px;
+  }
+  .haven .wordmark {
+    font-size: 36px;
+  }
+  .haven .header-note {
+    display: none;
+  }
+  .haven .hero {
+    padding: 49px 19px 45px;
+    min-height: 605px;
+  }
+  .haven .hero h1 {
+    font-size: 73px;
+  }
+  .haven .experience {
+    padding: 30px 20px 40px;
+  }
+  .haven .section-heading > p {
+    display: none;
+  }
+  .haven .preview-main {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .haven .timer-numerals {
+    font-size: 61px;
+  }
+  .haven .preview-columns {
+    grid-template-columns: 1fr;
+    margin: 0 20px 24px;
+    gap: 20px;
+  }
+  .haven .preview-columns section {
+    padding: 0;
+    border-left: none;
+  }
+  .haven .principles {
+    grid-template-columns: 1fr;
+    gap: 23px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .haven *,
+  .haven *::before,
+  .haven *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -37,7 +37,7 @@ export default function NewProjectPage() {
             Project creation &amp; citation verification wizard is configured for Phase 3.
           </p>
           <div className="flex justify-center gap-3 pt-2">
-            <Link href="/legacy-booth">
+            <Link href="/practice">
               <Button size="sm">Open Legacy Viva Booth</Button>
             </Link>
             <Link href="/dashboard">

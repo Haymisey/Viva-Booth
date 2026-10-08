@@ -3,29 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowUpRight, Eye, EyeOff, LoaderCircle, LockKeyhole } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  GraduationCap,
-  Eye,
-  EyeOff,
-  Lock,
-  Mail,
-  User,
-  ArrowRight,
-  ShieldCheck,
-  AlertCircle,
-} from "lucide-react";
 
 function SignUpForm() {
   const router = useRouter();
@@ -35,7 +14,6 @@ function SignUpForm() {
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -49,16 +27,11 @@ function SignUpForm() {
       return;
     }
 
-    if (password !== confirmPassword) {
-      setErrorMessage("Passwords do not match.");
-      return;
-    }
-
     setIsLoading(true);
 
     try {
       const res = await authClient.signUp.email({
-        name,
+        name: name || email.split("@")[0],
         email,
         password,
       });
@@ -77,172 +50,110 @@ function SignUpForm() {
     }
   };
 
+  const handleGoogle = async () => {
+    try {
+      setIsLoading(true);
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: callbackUrl,
+      });
+    } catch (err) {
+      console.error("Social login with google failed:", err);
+      setErrorMessage("Google sign-in did not complete. Please try again.");
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div>
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center size-12 rounded-2xl bg-gradient-to-tr from-primary/80 via-primary to-indigo-400 text-primary-foreground shadow-xl shadow-primary/25 ring-1 ring-white/20 mb-3">
-          <GraduationCap className="size-6" />
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground font-heading">
-          Create Account
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Join VivaBooth and begin preparing for your thesis oral defense
-        </p>
+    <main className="auth-main reveal">
+      <div className="auth-heading">
+        <span className="eyebrow">YOUR WORK. YOUR WORDS.</span>
+        <h1>Make yourself at home.</h1>
+        <p>A little space to practice. A little more confidence.</p>
       </div>
 
-      <Card className="border border-border/60 bg-card/85 backdrop-blur-xl shadow-2xl shadow-black/40">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-lg">Get Started</CardTitle>
-          <CardDescription>
-            Enter your details to create your academic candidate profile
-          </CardDescription>
-        </CardHeader>
+      {errorMessage ? (
+        <div role="alert" className="auth-message error">
+          {errorMessage}
+        </div>
+      ) : null}
 
-        <CardContent className="space-y-4">
-          {errorMessage && (
-            <div
-              role="alert"
-              aria-live="polite"
-              className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive flex items-center gap-2"
-            >
-              <AlertCircle className="size-4 shrink-0" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="e.g. Abebe Bikila"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-9 bg-background/50 focus-visible:ring-primary/40"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="candidate@university.edu"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-9 bg-background/50 focus-visible:ring-primary/40"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password (min 8 characters)</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••••••"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9 pr-10 bg-background/50 focus-visible:ring-primary/40"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  id="confirmPassword"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••••••"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-9 bg-background/50 focus-visible:ring-primary/40"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full gap-2 font-semibold shadow-lg shadow-primary/25"
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <div>
+          <label htmlFor="name">Your name</label>
+          <input
+            id="name"
+            type="text"
+            autoComplete="name"
+            placeholder="How should we greet you?"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+        <div>
+          <label htmlFor="email">Email address</label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@university.edu"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+        <div>
+          <label htmlFor="password">Password</label>
+          <div className="password-input">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              minLength={8}
+              placeholder="At least 8 characters"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
+            />
+            <button
+              type="button"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              onClick={() => setShowPassword((value) => !value)}
             >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="size-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                  Creating account...
-                </span>
-              ) : (
-                <>
-                  <span>Create Account</span>
-                  <ArrowRight className="size-4" />
-                </>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-
-        <CardFooter className="flex flex-col gap-3 pt-2 text-center text-xs text-muted-foreground border-t border-border/40">
-          <p>
-            Already have an account?{" "}
-            <Link
-              href={`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-              className="font-medium text-primary hover:underline hover:text-primary/90"
-            >
-              Sign in
-            </Link>
-          </p>
-          <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/75">
-            <ShieldCheck className="size-3.5 text-emerald-500" />
-            <span>FERPA &amp; GDPR Compliant • Secure Password Storage</span>
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
-        </CardFooter>
-      </Card>
-    </div>
+        </div>
+        <button type="submit" className="viva-button" disabled={isLoading}>
+          {isLoading ? <LoaderCircle className="animate-spin" size={16} /> : <>Create your account <ArrowUpRight size={16} /></>}
+        </button>
+      </form>
+
+      <div className="auth-divider">or take the familiar way</div>
+      <button type="button" className="google-button" onClick={handleGoogle} disabled={isLoading}>
+        <span className="google-mark">G</span>
+        Continue with Google
+      </button>
+
+      <div className="auth-switch">
+        Already have a space?
+        <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Back to sign in</Link>
+      </div>
+      <p className="auth-note">
+        <LockKeyhole size={11} />
+        Just your account. No extra profile needed.
+      </p>
+    </main>
   );
 }
 
 export default function SignUpPage() {
   return (
-    <React.Suspense
-      fallback={
-        <div className="text-center p-8 text-muted-foreground text-sm">
-          Loading registration...
-        </div>
-      }
-    >
+    <React.Suspense fallback={<main className="auth-main">Loading registration...</main>}>
       <SignUpForm />
     </React.Suspense>
   );
 }
-

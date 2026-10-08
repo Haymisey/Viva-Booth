@@ -79,7 +79,7 @@ export function UserMenu({ user }: UserMenuProps) {
             <span>Dashboard</span>
           </DropdownMenuItem>
         </Link>
-        <Link href="/legacy-booth">
+        <Link href="/practice">
           <DropdownMenuItem className="cursor-pointer">
             <Sparkles className="mr-2 size-4 text-primary" />
             <span>Viva Booth</span>

@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import type { SessionPhase } from "@/lib/types";
 
 type Props = {
@@ -20,6 +19,9 @@ export function formatTime(total: number) {
   return `${m}:${s}`;
 }
 
+const pill =
+  "inline-flex min-w-32 items-center justify-center rounded-full px-6 py-2.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40";
+
 export function SessionBar({ phase, elapsedSeconds, startLabel, stopLabel, onStart, onStop }: Props) {
   const canStart = phase !== "talking";
   const canStop = phase === "talking";
@@ -30,12 +32,17 @@ export function SessionBar({ phase, elapsedSeconds, startLabel, stopLabel, onSta
         {formatTime(elapsedSeconds)}
       </p>
       <div className="mt-8 flex gap-3">
-        <Button type="button" onClick={onStart} disabled={!canStart} className="min-w-32">
+        <button type="button" onClick={onStart} disabled={!canStart} className={`${pill} bg-ink text-paper hover:bg-ink/85`}>
           {startLabel}
-        </Button>
-        <Button type="button" tone="line" onClick={onStop} disabled={!canStop} className="min-w-32">
+        </button>
+        <button
+          type="button"
+          onClick={onStop}
+          disabled={!canStop}
+          className={`${pill} border border-ink/30 bg-transparent text-ink hover:border-ink/60`}
+        >
           {stopLabel}
-        </Button>
+        </button>
       </div>
     </div>
   );

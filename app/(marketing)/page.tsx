@@ -1,23 +1,5 @@
-import {
-  HeroSection,
-  TrustBanner,
-  FeaturesSection,
-  HowItWorksSection,
-  PricingSection,
-  FaqSection,
-  CtaSection,
-} from "@/components/marketing";
+import { HavenLanding } from "@/components/marketing/HavenLanding";
 
-export default function MarketingPage() {
-  return (
-    <>
-      <HeroSection />
-      <TrustBanner />
-      <FeaturesSection />
-      <HowItWorksSection />
-      <PricingSection />
-      <FaqSection />
-      <CtaSection />
-    </>
-  );
+export default function HomePage() {
+  return <HavenLanding />;
 }
