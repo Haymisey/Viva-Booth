@@ -61,9 +61,7 @@ function PracticePreview() {
         <span>
           <span className="status-dot" /> {running ? "Practice in progress" : "A moment inside Viva"}
         </span>
-        <span className="sample-label">
-          Sample session <ArrowUpRight size={13} />
-        </span>
+        <span className="sample-label">Preview</span>
       </div>
       <div className="preview-main">
         <div className="preview-intro">
