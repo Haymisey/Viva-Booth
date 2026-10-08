@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SoftScroll } from "@/components/booth/SoftScroll";
+import { startBrowserListen } from "@/lib/browser-listen";
 import { copyFor, quotaNotice } from "@/lib/copy";
 import { talkIsReady } from "@/lib/talk-ready";
 import type { PaperContext } from "@/lib/paper";
 import { requestQuestions } from "@/lib/request-questions";
+import { mergeSpeech } from "@/lib/speech-clean";
+import { hushVoxide, releaseVoxide } from "@/lib/voxide-client";
 import type { AppLanguage, Citation } from "@/lib/types";
 
 export type ExamTurn = { role: "examiner" | "student"; content: string };
@@ -40,19 +44,31 @@ export function ExaminerDoor({
   const [turns, setTurns] = useState<ExamTurn[]>(initialTurns);
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
+  const [listening, setListening] = useState(false);
   const [error, setError] = useState("");
+  const stopListen = useRef<(() => void) | null>(null);
+
+  const haltMic = () => {
+    stopListen.current?.();
+    stopListen.current = null;
+    setListening(false);
+  };
 
   useEffect(() => {
     setTurns(initialTurns);
     setAnswer("");
     setError("");
+    haltMic();
   }, [loadedTalkId, transcript, seconds, debrief]);
+
+  useEffect(() => () => haltMic(), []);
 
   if (phaseTalking || !stopped || !debrief) return null;
 
   const ready = talkIsReady(seconds, transcript);
 
   const startExam = async () => {
+    releaseVoxide();
     setBusy(true);
     setError("");
     const result = await requestQuestions({
@@ -72,7 +88,29 @@ export function ExaminerDoor({
     setTurns([{ role: "examiner", content: result.questions[0] }]);
   };
 
+  const toggleSpeak = () => {
+    if (busy) return;
+    if (listening) {
+      haltMic();
+      return;
+    }
+    setError("");
+    releaseVoxide();
+    hushVoxide();
+    setListening(true);
+    stopListen.current = startBrowserListen({
+      lang: "en-US",
+      onText: (full) => setAnswer(mergeSpeech("", full)),
+      onError: (reason) => {
+        haltMic();
+        setError(text.mic[reason]);
+      },
+    });
+  };
+
   const sendAnswer = async () => {
+    haltMic();
+    releaseVoxide();
     const spoken = answer.trim();
     if (!spoken || busy) return;
     setBusy(true);
@@ -117,35 +155,42 @@ export function ExaminerDoor({
         <p className="mt-5 text-[15px] leading-relaxed text-ink/65">{text.examTooShort}</p>
       ) : turns.length === 0 ? (
         <div className="mt-5 flex flex-col items-start gap-4">
-          <p className="text-[15px] leading-relaxed text-ink/65">{text.examHint}</p>
+          <p className="mt-0 text-[15px] leading-relaxed text-ink/65">{text.examHint}</p>
           <button type="button" className="paper-strip-btn solid" disabled={busy} onClick={() => void startExam()}>
             {busy ? text.examAsking : text.examAsk}
           </button>
         </div>
       ) : (
         <div className="mt-5 flex flex-col gap-4">
-          {turns.map((turn, index) => (
-            <div key={`${turn.role}-${index}`} className={turn.role === "examiner" ? "exam-turn exam-q" : "exam-turn exam-a"}>
-              <p className="exam-role">{turn.role === "examiner" ? text.exam : text.examYou}</p>
-              <p className="whitespace-pre-wrap">{turn.content}</p>
-            </div>
-          ))}
+          <SoftScroll className="exam-thread">
+            {turns.map((turn, index) => (
+              <div key={`${turn.role}-${index}`} className={turn.role === "examiner" ? "exam-turn exam-q" : "exam-turn exam-a"}>
+                {turn.role === "student" ? <p className="exam-role">{text.examYou}</p> : null}
+                <p className="whitespace-pre-wrap">{turn.content}</p>
+              </div>
+            ))}
+          </SoftScroll>
           <textarea
             className="paper-strip-field paper-strip-excerpt"
             rows={3}
             value={answer}
             disabled={busy}
-            placeholder={text.examAnswer}
+            placeholder={listening ? text.examListening : text.examAnswer}
             onChange={(event) => setAnswer(event.target.value)}
           />
-          <button
-            type="button"
-            className="paper-strip-btn solid"
-            disabled={busy || !answer.trim()}
-            onClick={() => void sendAnswer()}
-          >
-            {busy ? text.examListening : text.examSend}
-          </button>
+          <div className="exam-actions">
+            <button type="button" className="paper-strip-btn" disabled={busy} onClick={toggleSpeak}>
+              {listening ? text.examStopSpeak : text.examSpeak}
+            </button>
+            <button
+              type="button"
+              className="paper-strip-btn solid"
+              disabled={busy || !answer.trim()}
+              onClick={() => void sendAnswer()}
+            >
+              {busy ? text.examWaiting : text.examSend}
+            </button>
+          </div>
         </div>
       )}
       {error ? (

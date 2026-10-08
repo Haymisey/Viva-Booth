@@ -40,6 +40,9 @@ type Copy = {
   examTooShort: string;
   examAnswer: string;
   examSend: string;
+  examSpeak: string;
+  examStopSpeak: string;
+  examWaiting: string;
   examListening: string;
   examFailed: string;
   badge: Record<CitationStatus, string>;
@@ -83,6 +86,9 @@ const en: Copy = {
   examTooShort: "Too short to examine. Say the question, what you did, and what you found, then stop.",
   examAnswer: "Answer in a few sentences",
   examSend: "Answer",
+  examSpeak: "Speak",
+  examStopSpeak: "Stop speaking",
+  examWaiting: "Waiting…",
   examListening: "Listening…",
   examFailed: "The examiner could not answer just now. Wait a moment and try again.",
   badge: {
@@ -143,6 +149,9 @@ const am: Copy = {
   examTooShort: "ለመፈተን በጣም አጭር ነው። ጥያቄውን፣ ያደረግከውን፣ ያገኘኸውን በል፣ ከዚያ አቁም።",
   examAnswer: "በጥቂት ዓረፍተ ነገሮች መልስ",
   examSend: "መልስ",
+  examSpeak: "ተናገር",
+  examStopSpeak: "መናገር አቁም",
+  examWaiting: "በመጠበቅ ላይ…",
   examListening: "በማዳመጥ ላይ…",
   examFailed: "ፈታኙ አሁን መመለስ አልቻለም። ትንሽ ጠብቅና ድገም።",
   badge: {

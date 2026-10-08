@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     const packed = body.abstract?.trim()
       ? `${paper}\n\nPacked abstract:\n${body.abstract.trim()}`
       : paper;
+    const priorNotes = await recentCoachNotes(user?.id);
     const text = await withUserGemini(() =>
       generateDebrief({
         transcript,
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
         wordCount: talkWordCount(transcript),
         language,
         paper: packed,
-        priorNotes: await recentCoachNotes(user?.id),
+        priorNotes,
       }),
     );
     if (!text) return NextResponse.json({ error: "Debrief failed" }, { status: 502 });

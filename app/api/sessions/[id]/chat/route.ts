@@ -55,13 +55,14 @@ export async function POST(
     const { recentCoachNotes } = await import("@/lib/session-memory");
     const { talkWordCount } = await import("@/lib/gemini");
     const { withUserGemini } = await import("@/lib/server/keys");
+    const priorNotes = await recentCoachNotes(user.id);
     const examinerReplyText = await withUserGemini(() => generateExaminerReply({
       sessionTitle: session.title,
       transcript: session.transcript,
       history,
       studentReply: cleanAnswer,
       paper: parsePaperJson(session.paperJson),
-      priorNotes: await recentCoachNotes(user.id),
+      priorNotes,
       wordCount: talkWordCount(session.transcript),
     }));
     if (!examinerReplyText) {

@@ -20,7 +20,7 @@ import { bindVivaSession } from "@/lib/session-bridge";
 import { loadSettings, saveSettings } from "@/lib/settings";
 import { mergeSpeech } from "@/lib/speech-clean";
 import { verifyCitations } from "@/lib/verify-citations";
-import { hushVoxide } from "@/lib/voxide-client";
+import { hushVoxide, releaseVoxide } from "@/lib/voxide-client";
 import { Wordmark } from "@/components/viva/Wordmark";
 import { emptyPaper, type PaperContext } from "@/lib/paper";
 import { countStatuses, sayLine, titleFromTranscript } from "@/lib/sessions";
@@ -195,6 +195,7 @@ export function Booth({
   }, [language, onTalkSaved, paper, reportError, signedIn]);
 
   const finalizeStop = useCallback(() => {
+    releaseVoxide();
     const spokenText = liveRef.current.trim();
     const seconds = elapsed;
     setTranscript(spokenText);

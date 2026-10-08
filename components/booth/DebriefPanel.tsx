@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+import { SoftScroll } from "@/components/booth/SoftScroll";
 import { copyFor } from "@/lib/copy";
 import type { Verdict } from "@/lib/gemini";
 import type { AppLanguage, Citation } from "@/lib/types";
@@ -45,10 +46,10 @@ function parseDebrief(text: string): DebriefLine[] {
 
 function Pane({ title, children }: { title: ReactNode; children: ReactNode }) {
   return (
-    <article className="flex min-h-[12rem] flex-col md:px-8 md:first:pl-0 md:last:pr-0">
+    <article className="debrief-pane flex min-h-[12rem] flex-col md:px-8 md:first:pl-0 md:last:pr-0">
       <h3 className="font-display text-2xl text-ink">{title}</h3>
       <span className="mt-2 block h-px w-16 bg-ink/40" />
-      <div className="mt-5 flex-1 text-[15px] leading-relaxed text-ink/85">{children}</div>
+      <SoftScroll className="debrief-pane-body mt-5 flex-1 text-[15px] leading-relaxed text-ink/85">{children}</SoftScroll>
     </article>
   );
 }

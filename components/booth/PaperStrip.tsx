@@ -67,7 +67,7 @@ export function PaperStrip({ paper, language, disabled, onChange }: Props) {
         ref={inputRef}
         type="file"
         accept="application/pdf,.pdf"
-        className="sr-only"
+        className="paper-file"
         disabled={disabled || busy}
         onChange={(event) => {
           const file = event.target.files?.[0];

@@ -1113,7 +1113,20 @@
 }
 
 .paper-attach {
+  position: relative;
   margin-top: 22px;
+}
+
+.paper-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .paper-add,
@@ -1181,6 +1194,48 @@
   outline: none;
   resize: vertical;
   min-height: 3rem;
+}
+
+.debrief-pane-body,
+.exam-thread {
+  position: relative;
+  max-height: min(28rem, 52vh);
+}
+
+.soft-scroll-body {
+  max-height: min(28rem, 52vh);
+  overflow-y: auto;
+  overflow-anchor: none;
+  overscroll-behavior: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.soft-scroll-body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.soft-scroll-rail {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  bottom: 4px;
+  width: 3px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.soft-scroll.is-scrolling .soft-scroll-rail {
+  opacity: 1;
+}
+
+.soft-scroll-thumb {
+  width: 3px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 28%, transparent);
 }
 
 .examiner-door {
@@ -1252,17 +1307,24 @@
   color: var(--rust, #9a3412);
 }
 
+.exam-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .exam-turn {
   padding: 12px 0;
   border-bottom: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
 }
 
 .exam-role {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: color-mix(in oklab, var(--foreground) 48%, transparent);
+  font-family: var(--font-manrope), var(--font-ethiopic), sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
   margin-bottom: 6px;
 }
 

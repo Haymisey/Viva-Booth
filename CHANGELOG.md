@@ -10,6 +10,12 @@ Team log of what shipped, broke, or got cut. Mirror important entries to STARK C
 - After a real Stop, Ask me questions is a second door. Too short (under 20s or 40 words) stays closed. One question at a time; Gemini is not replaced with canned lines.
 - Settings (paper page): name, password change (other sessions revoked), optional Gemini BYOK encrypted at rest. GitHub login is gone. After sign-in, the app opens `/practice`.
 - Landing and booth stay cream paper (Instrument Serif, Manrope). The dark AppShell is leftover, not the product.
+- Debrief 500: last-10 notes were `await`ed inside a non-async Gemini callback. Fetch them first, then generate. Same pattern on session chat.
+- Examiner answers can be typed or spoken (Speak). “Listening…” was the Gemini wait label; that button now says it is waiting. Student turns are marked **You** in the page font. Examiner turns have no extra heading.
+- Voxide stays mounted for Start/Stop, but the orange mic disconnects on Stop, Ask me questions, Speak, and Answer so it does not talk over the exam.
+- Paper attach no longer leaks the browser “No file chosen” control.
+- Long Transcript, Citations, Say it like this, and the examiner thread cap and scroll. The Windows scrollbar (arrows and all) is hidden; a thin pill shows only while that column is moving. At the top or bottom of a column, the next wheel continues the page.
+- `/demo` is a scroll-driven film of the booth for a YouTube screen recording. It is not the live practice page.
 
 ## 2026-10-01
 
