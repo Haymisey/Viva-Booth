@@ -1,26 +1,52 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Instrument_Serif, Inter, Manrope, Noto_Sans_Ethiopic } from "next/font/google";
+import localFont from "next/font/local";
 import { Providers } from "./providers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
-const ethiopic = Noto_Sans_Ethiopic({
-  subsets: ["ethiopic"],
+const inter = localFont({
+  src: "../fonts/Inter-Variable.ttf",
+  variable: "--font-sans",
+  weight: "100 900",
+  display: "swap",
+});
+
+const geistMono = localFont({
+  src: "../fonts/JetBrainsMono-Variable.ttf",
+  variable: "--font-geist-mono",
+  weight: "100 800",
+  display: "swap",
+});
+
+const ethiopic = localFont({
+  src: "../fonts/NotoSansEthiopic-Variable.ttf",
   variable: "--font-ethiopic",
-  weight: ["400", "500", "600"],
+  weight: "100 900",
+  display: "swap",
 });
-const instrument = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
+
+const instrument = localFont({
+  src: [
+    {
+      path: "../fonts/InstrumentSerif-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../fonts/InstrumentSerif-Italic.ttf",
+      weight: "400",
+      style: "italic",
+    },
+  ],
   variable: "--font-instrument",
+  display: "swap",
 });
-const manrope = Manrope({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+
+const manrope = localFont({
+  src: "../fonts/Manrope-Variable.ttf",
   variable: "--font-manrope",
+  weight: "200 800",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -47,7 +73,7 @@ export default function RootLayout({
         ethiopic.variable,
         instrument.variable,
         manrope.variable,
-        "font-sans"
+        "font-sans",
       )}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground selection:bg-primary/20 selection:text-primary">
